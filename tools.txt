@@ -1,0 +1,1775 @@
+0
+Name: cactus/BrenkFilter
+Description: Used when you need to calculate whether a molecule triggers the Brenk Filter.
+Inputs: 
+	mol : rdkit.Chem.rdchem.Mol
+Outputs:
+	bool True if the molecule triggers the Brenk filter, False otherwise. Notes The Brenk filter is described in: R. Brenk, et al., ChemMedChem, 2008, 3: 435-444. https://doi.org/10.1002/cmdc.200700139
+1
+Name: cactus/CalculateBBBPermeant
+Description: calculates the Blood Brain Barrier Permeability of the compound
+Inputs: 
+	compound_smiles : str
+Outputs:
+	Boolean of whether the molecule is blood brain permeant or not. Notes The BOILED-Egg model is described in: A. Daina and V. Zoete, ChemMedChem 2016, 11, 1117. https:/doi.org/10.1002/cmdc.201600182
+2
+Name: cactus/calculate_druglikeness
+Description: calculates the druglikeness of the compound with regards to Lipinski's rule of 5
+Inputs: 
+	compound_smiles : str
+Outputs:
+	Union[str, dict[str, str]] Notes The Lipinksi Rule of 5 is described in: C.A Lipinksi, et al. Adv. Drug Delivery Rev. 2001, 46, 1-3, 3-26 https://doi.org/10.1016/S0169-409X(00)00129-0
+3
+Name: cactus/calculate_gi_absorption
+Description: returns whether the gastrointestinal absorption is high or low
+Inputs: 
+	compound_smiles : str
+Outputs:
+	string of whether the gastrointestinal absorption is 'high' or 'low' Notes The BOILED-Egg model is described in: A. Daina and V. Zoete, ChemMedChem 2016, 11, 1117. https:/doi.org/10.1002/cmdc.201600182
+4
+Name: cactus/CalculateLogP
+Description: Use this tool when you need to calculate the log of the partition coefficient (LogP) of a compound.
+Inputs: 
+	compound_smiles: Compound in SMILES format
+Outputs:
+	float: Wildman-Crippen LogP value
+5
+Name: cactus/CalculateMolecularWeight
+Description: Use this tool when you need to calculate the molecular weight of a SMILES string. Units in Dalton.
+Inputs: 
+	compound: Compound in SMILES format
+Outputs:
+	float: The exact molecular weight in daltons
+6
+Name: cactus/CalculateQED
+Description: Compute Quantitative Estimate of Druglikeness (QED) of the given molecule
+Inputs: 
+	compound: Compound in SMILES format
+Outputs:
+	float: The QED from 0 (druglike) to 1 (not)
+7
+Name: cactus/CalculateSA
+Description: Used to compute the synthetic accessibility (SA) of the given molecule.
+Inputs: 
+	compound: Compound in SMILES format
+Outputs:
+	float: The SA between 1 (easy) and 10 (hard)
+8
+Name: cactus/CalculateTPSA
+Description: Compute the Topological polar surface area (TPSA) of the given molecule.
+Inputs: 
+	compound: Compound in SMILES format
+Outputs:
+	float: The TPSA in angstroms^2
+9
+Name: cactus/CasToSMILES
+Description: Convert the input cas into its corresponding SMILES notation
+Inputs: 
+	input_query (str): The cas number of the chemical compound.
+Outputs:
+	str: The SMILES notation in the output format.
+10
+Name: cactus/ChemblidToSMILES
+Description: Convert the input chemblid into its corresponding SMILES notation
+Inputs: 
+	input_id (str): The ChEMBL database id of the chemical compound.
+Outputs:
+	str: The SMILES notation in the output format.
+11
+Name: cactus/CidToSMILES
+Description: Convert the input Pubchem id into its corresponding SMILES notation
+Inputs: 
+	input_id (str): The PubChem id of the chemical compound.
+Outputs:
+	str: The SMILES notation in the output format.
+12
+Name: cactus/InchikeyToSMILES
+Description: Use this tool when you need to convert a molecule's inchikey
+to it's corresponding SMILES string.
+
+Examples of InchiKeys:
+- HUMNYLRZRPPJDN-UHFFFAOYSA-N
+- BJKAKPMCBYMRJI-UHFFFAOYSA-N
+- ZRSNZINYAWTAHE-UHFFFAOYSA-N
+Inputs: 
+	input_name (str): The InchIkey of the chemical compound.
+Outputs:
+	str: The SMILES notation in the output format.
+13
+Name: cactus/MolecularFormulaToSMILES
+Description: Use this tool when you need to convert a chemical formula into a SMILES string.
+
+A chemical formula is a sequence of atomic symbols and/or numeric subscripts that represents the
+composition of a compound.
+
+An example of a chemical formula is C6H12O6 or CH4
+
+Only accept input that appears in this format.
+Inputs: 
+	input_formula (str): The molecular formula of the chemical compound.
+Outputs:
+	str: The SMILES notation in the output format.
+14
+Name: cactus/CommonNameToSMILES
+Description: Use this tool when you need to convert a molecule's common name to it's corresponding SMILES string.
+
+A common name could look like this: Acetate, Sulfate, Alkene, Benzene.
+
+Most generic searches will be in this format.
+Inputs: 
+	input_name (str): The name of the chemical compound.
+Outputs:
+	str: The SMILES notation in the output format.
+15
+Name: cactus/PainsFilter
+Description: Used when you need to calculate whether a molecule triggers the PAINS Filter.
+Inputs: 
+	compound_smiles : str
+Outputs:
+	bool True if the molecule triggers the PAINS filter, False otherwise. Notes The PAINS filter is described in: J.B. Baell and G.A. Holloway, J. Med. Chem. 2010, 53, 7, 2719–2740 https://doi.org/10.1021/jm901137j
+16
+Name: cactus/zinc_id_to_SMILES
+Description: Convert the input zinc id into its corresponding SMILES notation
+Inputs: 
+	input_id (str): The ZINC15 id of the chemical compound.
+Outputs:
+	str: The SMILES notation in the output format.
+17
+Name: chemcrow/Name2SMILES
+Description: Converts a chemical name to its SMILES representation.
+Inputs: 
+	name (str): The chemical name.
+Outputs:
+	smiles (str): The SMILES string.
+18
+Name: chemcrow/SMILES2Name
+Description: Converts a SMILES string to its chemical name.
+Inputs: 
+	smiles (str): The SMILES string.
+Outputs:
+	name (str): The chemical name.
+19
+Name: chemcrow/MolFromSmiles
+Description: Creates an RDKit molecule object from a SMILES string.
+Inputs: 
+	smiles (str): The SMILES string.
+Outputs:
+	mol (rdkit.Chem.rdchem.Mol): The molecule object.
+20
+Name: chemcrow/MolToMolBlock
+Description: Get the Mol block from a SMILES string.
+Inputs: 
+	smiles (str): The SMILES string of the molecule.
+Outputs:
+	mol_block (str): The Mol block of the molecule.
+21
+Name: chemcrow/GetMolWT
+Description: Get the molecular weight of a molecule from a SMILES string.
+Inputs: 
+	smiles (str): The SMILES string of the molecule.
+Outputs:
+	molecular_weight (float): The molecular weight of the molecule.
+22
+Name: chemcrow/GetHBA
+Description: Get the number of hydrogen bond acceptors of a molecule from a SMILES string.
+Inputs: 
+	smiles (str): The SMILES string of the molecule.
+Outputs:
+	hba (int): The number of hydrogen bond acceptors.
+23
+Name: chemcrow/GetHBD
+Description: Get the number of hydrogen bond donors of a molecule from a SMILES string.
+Inputs: 
+	smiles (str): The SMILES string of the molecule.
+Outputs:
+	hbd (int): The number of hydrogen bond donors.
+24
+Name: chemcrow/GetNumRotatableBonds
+Description: Get the number of rotatable bonds of a molecule from a SMILES string.
+Inputs: 
+	smiles (str): The SMILES string of the molecule.
+Outputs:
+	rotatable_bonds (int): The number of rotatable bonds.
+25
+Name: chemcrow/GetTPSA
+Description: Get the topological polar surface area of a molecule from a SMILES string.
+Inputs: 
+	smiles (str): The SMILES string of the molecule.
+Outputs:
+	tpsa (float): The topological polar surface area.
+26
+Name: chemcrow/GetLogP
+Description: Get the logP of a molecule from a SMILES string.
+Inputs: 
+	smiles (str): The SMILES string of the molecule.
+Outputs:
+	logp (float): The logP of the molecule.
+27
+Name: chemcrow/GetMorganFingerprint
+Description: Get the Morgan fingerprint of a molecule from a SMILES string.
+Inputs: 
+	smiles (str): The SMILES string of the molecule.
+Outputs:
+	fingerprint (numpy.ndarray): The Morgan fingerprint.
+28
+Name: chemcrow/TanimotoSimilarity
+Description: Calculate the Tanimoto similarity between two molecules from their SMILES strings.
+Inputs: 
+	smiles1 (str): The SMILES string of the first molecule.	smiles2 (str): The SMILES string of the second molecule.
+Outputs:
+	similarity (float): The Tanimoto similarity.
+29
+Name: chemcrow/FindSubstructure
+Description: Find if a molecule contains a substructure.
+Inputs: 
+	smiles (str): The SMILES string of the molecule.	substructure_smiles (str): The SMILES string of the substructure.
+Outputs:
+	has_substructure (bool): Whether the molecule contains the substructure.
+30
+Name: chemcrow/RXNPredict
+Description: Predict the product of a reaction from the SMILES strings of the reactants.
+Inputs: 
+	reactants_smiles (str): The SMILES strings of the reactants, separated by a dot.
+Outputs:
+	product_smiles (str): The SMILES string of the product.
+31
+Name: chemcrow/Retrosynthesis
+Description: Perform retrosynthesis on a molecule to find possible reactants.
+Inputs: 
+	product_smiles (str): The SMILES string of the product.
+Outputs:
+	reactants_smiles (list): A list of possible reactant SMILES strings.
+32
+Name: chemlib/judge_the_balance_of_reaction
+Description: Judge whether the reaction formula is balanced.
+Inputs: 
+	reaction_formula: str, a string representing the reaction formula.
+Outputs:
+	Is_Balanced: bool, whether the formula is balanced.
+33
+Name: chemlib/reactant_formulas_of_reaction
+Description: Get reactant formulas of the reaction.
+Inputs: 
+	reaction_formula: str, a string representing the reaction formula.
+Outputs:
+	Reactant_Formulas: list, the reactant formulas.
+34
+Name: chemlib/product_formulas_of_reaction
+Description: Get product formulas of the reaction.
+Inputs: 
+	reaction_formula: str, a string representing the reaction formula.
+Outputs:
+	Product_Formulas: list, the product formulas.
+35
+Name: chemlib/combustion_reactions
+Description: Create and balance a combustion reaction for a given compound.
+Inputs: 
+	compound: str, the molecular formula of the compound to combust.
+Outputs:
+	Is_Balanced: bool, whether the formula is balanced.
+36
+Name: chemlib/balance_the_reaction
+Description: Balance the chemical reaction.
+Inputs: 
+	reaction_formula: str, a string representing the reaction formula.
+Outputs:
+	Product_Formulas: list, the product formulas.
+37
+Name: chemlib/reaction_stoichiometry_amounts
+Description: Get stoichiometric amounts of all compounds in the reaction given the amount of one compound.
+Inputs: 
+	reaction_formula: str, the reaction formula string.	compound_number: int, the chosen compound in the reaction by order of appearance (left to right).	unit: Literal["grams", "moles", "molecules"], given stoichiometry amount.	amount: float, the amount of the chosen compound.
+Outputs:
+	ValueError: if more than one argument is given under kwargs.
+38
+Name: chemlib/limiting_reagent_of_reaction
+Description: Determine the limiting reagent in a chemical reaction.
+Inputs: 
+	reaction_formula: str, the reaction formula string.	mode: list, the units of each amount in args. Default is grams, can also be moles or molecules.	rectant_amount_list: list, the amounts of each reactant to use in the chemical reaction.
+Outputs:
+	ValueError: If the mode is not grams, moles, or molecules.
+39
+Name: chemlib/galvanic_cell_properties
+Description: Create a Galvanic (Voltaic) Cell with the given electrodes and return its properties.
+Inputs: 
+	element_electrode1: str, the elemental composition of one of the electrodes.	element_electrode2: str, the elemental composition of the other electrode.
+Outputs:
+	NotImplementedError: If either of the electrodes is invalid or its reduction potential is unknown.
+40
+Name: chemlib/galvanic_cell_potential
+Description: Create a Galvanic (Voltaic) Cell with the given electrodes and return its potential.
+Inputs: 
+	element_electrode1: str, the elemental composition of one of the electrodes.	element_electrode2: str, the elemental composition of the other electrode.
+Outputs:
+	NotImplementedError: If either of the electrodes is invalid or its reduction potential is unknown.
+41
+Name: chemlib/perform_electrolysis
+Description: Perform electrolysis calculations given an element, the moles of electrons transferred, and two of the following: current (amps), time (seconds), or mass (grams).
+Inputs: 
+	element: str, the symbol of a chemical element.	n: int, the moles of electrons transferred.	grams: float, mass of the meterial.	seconds: float, time of electrolysis.
+Outputs:
+	TypeError: If not only 2 of the parameters in kwargs are specified.
+42
+Name: chemlib/get_empirical_formula_by_percent_composition
+Description: Calculate the empirical formula of a compound based on the given percentage compositions of elements.
+Inputs: 
+	percent_composition: dict, keyword arguments representing the percentage compositions of elements in the compound (e.g., {'C'=80.6, 'H'=19.4}).
+Outputs:
+	ValueError: If the sum of the percentages is not equal to 100.
+43
+Name: chemlib/analyze_combustion
+Description: Get the empirical formula of a hydrocarbon given the grams of CO2 and grams of H2O formed from its combustion.
+Inputs: 
+	CO2: float, the grams of carbon dioxide formed as a result of the combustion of the hydrocarbon.	H2O: float, the grams of water formed as a result of the combustion of the hydrocarbon.
+Outputs:
+	compound_unicode: str, the empirical formula of the hydrocarbon.
+44
+Name: chemlib/acidity_calculation
+Description: For any inputted pH, pOH, [H+], or [OH-], finds the corresponding values.
+Inputs: 
+	pH: The value of the chosen input (pH=, pOH=, H=, or OH=).
+Outputs:
+	acidity: dict, PH value.
+45
+Name: chemlib/make_solution_by_grams_per_liter
+Description: Given grams of solute per liter. Return the molarity of the solution.
+Inputs: 
+	compound: str, the formula of the solute compound.	grams: float, how many grams of solute.	liters: float, how many liters of solution.
+Outputs:
+	molarity: float, the molarity of the solution.
+46
+Name: chemlib/electromagnetic_wave_by_wavelength
+Description: Get the properties of the wave based on the wavelength.
+Inputs: 
+	wavelength: float, wavelength of the wave.
+Outputs:
+	properties: dict, properties of the wave (wavelength, frequency, energy).
+47
+Name: chemlib/electromagnetic_wave_by_frequency
+Description: Get the properties of the wave based on the frequency.
+Inputs: 
+	frequency: float, frequency of the wave.
+Outputs:
+	properties: dict, properties of the wave (wavelength, frequency, energy).
+48
+Name: chemlib/electromagnetic_wave_by_energy
+Description: Get the properties of the wave based on the energy.
+Inputs: 
+	energy: float, energy of the wave.
+Outputs:
+	properties: dict, properties of the wave (wavelength, frequency, energy).
+49
+Name: chemlib/electromagnetic_wave_by_rydberg_equation
+Description: Get the properties of the wave based on the Rydberg equation for a given element and orbitals.
+Inputs: 
+	element: str, the symbol of the element. For example, "H"	n1: int, initial orbital number.	n2: int, final orbital number (must be greater than n1).
+Outputs:
+	ValueError: If n2 is not greater than n1.
+50
+Name: chemlib/energy_of_hydrogen_orbital
+Description: Calculate the energy of an electron in the nth orbital of the Hydrogen atom in Joules.
+Inputs: 
+	n: int, the orbital number (1 for the first orbital, 2 for the second, etc.).
+Outputs:
+	energy: float, Energy of the electron in Joules.
+51
+Name: chemlib/calculate_element_frequencies_in_compound
+Description: Calculate the frequencies of the constituent elements in the compound.
+Inputs: 
+	compound: str, compound molecular formula in the string format.
+Outputs:
+	element_frequencies: dict, the frequencies of the constituent elements in the compound.
+52
+Name: chemlib/calculate_compound_molar_mass
+Description: Calculate the molar mass in (g/mol) of the compound.
+Inputs: 
+	compound: str, compound molecular formula in the string format.
+Outputs:
+	molar_mass: float, the molar mass in (g/mol) of the compound.
+53
+Name: chemlib/calculate_compound_percentage_composition_by_mass
+Description: Get the percentage composition by mass of a certain element of the compound.
+Inputs: 
+	compound: str, compound molecular formula in the string format.	element: str, the constituent element of which the user wants to get percentage composition.
+Outputs:
+	element_percentage_compostion: float, the percentage composition by mass of the element in the compound.
+54
+Name: chemlib/convert_compound_stoichiometry_amount
+Description: Get stoichiometric amounts of the compound given one measurement.
+Inputs: 
+	compound: str, compound molecular formula in the string format.	unit: Literal["grams", "moles", "molecules"], given stoichiometry amount.	amount: float, the amount of the chosen compound.
+Outputs:
+	compound_stoichiometry_amount: dict, the percentage composition by mass of the element in the compound.
+55
+Name: chemlib/get_element_properties
+Description: Get all the properties of the given element, including its atomic number, name, symbol, atomic mass, neutrons, protons, electrons, period, group, phase, whether it's radioactive, whether it's natural, whether it's a metal, nonmetal or metalloid, type, atomic radius, electronegativity, first ionization energy, density, melting point, boiling point, isotopes, discoverer, year of discovery, specific heat, shells, valence, electron configuration, and mass number.
+Inputs: 
+	element: str, the atomic symbol of an element.
+Outputs:
+	MassNumber: float, the mass number of the element.
+56
+Name: chemistrytools/convert_compound_CID_to_SMILES
+Description: Retrieve the Canonical SMILES representation of a chemical compound using its PubChem Compound Identifier (CID).
+Inputs: 
+	compound_CID: int, the PubChem Compound Identifier (CID) of the chemical compound.
+Outputs:
+	compound_SMILES: str, the Canonical SMILES representation of the chemical compound.
+57
+Name: chemistrytools/compound_string_to_html
+Description: Convert a chemical formula string to its HTML representation.
+Inputs: 
+	compound: str, compound molecular formula in the string format.
+Outputs:
+	html: str, the HTML representation of the chemical formula.
+58
+Name: chemistrytools/calculate_spectrum_similarity
+Description: Calculate spectrum similarity score between two spectra.
+Inputs: 
+	mz_top : list, List of m/z values for the top spectrum.	intensities_top : list, List of intensity values corresponding to mz_top.	mz_bottom : list, List of m/z values for the bottom spectrum.	intensities_bottom : list, List of intensity values corresponding to mz_bottom.
+Outputs:
+	score_2: float, Similarity score of spectra_bottom to spectra_top.
+59
+Name: chemistrytools/get_compound_MolecularWeight_by_CID
+Description: Retrieve the molecular weight (molecular mass) of a chemical compound using its PubChem Compound Identifier (CID).
+Inputs: 
+	compound_CID: int, the PubChem Compound Identifier (CID) of the chemical compound.
+Outputs:
+	molecular_weight: float, the molecular weight (molecular mass) of the chemical compound.
+60
+Name: chemistrytools/get_element_information
+Description: Calculate information about the given element, including its atomic number, symbol, name, atomic mass, description, electron configuration, and electron configuration dictionary.
+Inputs: 
+	element: a str, the atomic symbol of an element.
+Outputs:
+	eleconfig_dict: dict, the electron configuration in dictionary form.
+61
+Name: chemistrytools/calculate_compound_molar_mass
+Description: Calculate the molar mass of a given chemical formula.
+Inputs: 
+	compound: str, compound molecular formula in the string format.
+Outputs:
+	mass: float, the molar mass of the chemical formula.
+62
+Name: chemistrytools/compound_string_to_unicode
+Description: Convert a chemical formula string to its Unicode representation.
+Inputs: 
+	compound: str, compound molecular formula in the string format.
+Outputs:
+	unicode: str, the Unicode representation of the chemical formula.
+63
+Name: chemistrytools/convert_compound_CID_to_Molecular_Formula
+Description: Retrieve the molecular formula of a chemical compound using its PubChem Compound Identifier (CID).
+Inputs: 
+	compound_CID: int, the PubChem Compound Identifier (CID) of the chemical compound.
+Outputs:
+	compound: str, the molecular formula of the chemical compound.
+64
+Name: chemistrytools/get_compound_CID
+Description: Retrieve the PubChem Compound Identifier (CID) for a given chemical name.
+Inputs: 
+	compound: str, compound name in the string format.
+Outputs:
+	compound_CID: int, the PubChem Compound Identifier (CID) of the chemical compound.
+65
+Name: chemistrytools/compound_string_to_latex
+Description: Convert a chemical formula string to its LaTeX representation.
+Inputs: 
+	compound: str, compound molecular formula in the string format.
+Outputs:
+	latex: str, the LaTeX representation of the chemical formula.
+66
+Name: chemistrytools/convert_compound_CID_to_IUPAC
+Description: Retrieve the IUPAC name of a chemical compound using its PubChem Compound Identifier (CID).
+Inputs: 
+	compound_CID: int, the PubChem Compound Identifier (CID) of the chemical compound.
+Outputs:
+	iupac_name: str, the IUPAC name of the chemical compound.
+67
+Name: chemistrytools/get_constants
+Description: Retrieve the value, unit, and symbol of a physical constant by its name.
+Inputs: 
+	name: str, the name of the physical constant (e.g., 'avogadro_number', 'boltzmann_constant').
+Outputs:
+	symbol: str, the symbol or abbreviation of the constant.
+68
+Name: chemistrytools/get_compound_charge_by_CID
+Description: Retrieve the charge of a chemical compound using its PubChem Compound Identifier (CID).
+Inputs: 
+	compound_CID: int, the PubChem Compound Identifier (CID) of the chemical compound.
+Outputs:
+	charge: int, the charge of the chemical compound.
+69
+Name: scitooleval/NameToSMILES
+Description: Query a molecule name and return its SMILES string in Markdown format.
+Inputs: 
+	molecule_name (str): The name of the molecule to query.
+Outputs:
+	str: A Markdown formatted string containing the molecule's SMILES and additional information.
+70
+Name: scitooleval/NameToCas
+Description: Query a molecule name and return its SMILES string in Markdown format.
+Inputs: 
+	molecule_name (str)
+Outputs:
+	str
+71
+Name: scitooleval/RXNPredict
+Description: Predict the outcome of a chemical reaction and return the result in Markdown format.
+Inputs: 
+	reactants (str): The SMILES string of the reactants separated by a dot '.'.
+Outputs:
+	str: A Markdown formatted string containing the reaction prediction.
+72
+Name: scitooleval/RXNRetrosynthetic
+Description: Predicts a retrosynthetic pathway for a product SMILES and returns the first pathway with detailed SMILES for each step
+Inputs: 
+	product (str): The SMILES string of the product.
+Outputs:
+	str: A Markdown formatted string containing the first retrosynthetic pathway and reactions details.
+73
+Name: scitooleval/RXNPredictProperties
+Description: Predicts reaction properties such as atom-to-atom mapping and reaction yield for a single reaction SMILES string.
+Inputs: 
+	reaction (str): A reaction SMILES string.
+Outputs:
+	str: A Markdown formatted string containing predicted properties.
+74
+Name: scitooleval/SMILESToWeight
+Description: Calculate the molecular weight of a molecule given its SMILES string.
+Inputs: 
+	smiles (str): The SMILES string of the molecule.
+Outputs:
+	str: A Markdown formatted string containing the molecular weight.
+75
+Name: scitooleval/MolSimilarity
+Description: Calculate the Tanimoto similarity between two molecules given their SMILES strings.
+Inputs: 
+	smiles_pair (str): Two SMILES strings separated by a dot '.'.
+Outputs:
+	str: A Markdown formatted string containing the similarity result.
+76
+Name: scitooleval/FuncGroups
+Description: Identify and list the functional groups in a molecule given its SMILES string.
+Inputs: 
+	smiles (str): The SMILES string of the molecule.
+Outputs:
+	str: A Markdown formatted string listing the functional groups.
+77
+Name: scitooleval/SafetySummary
+Description: Returns a summary of safety information for a given CAS number.The summary includes Operator safety, GHS information,Environmental risks, and Societal impact.
+Inputs: 
+	cas (str): The CAS number of the molecule.
+Outputs:
+	str: A Markdown formatted string containing the safety summary.
+78
+Name: scitooleval/CheckPatent
+Description: Returns a summary of safety information for a given CAS number.The summary includes Operator safety, GHS information,Environmental risks, and Societal impact.
+Inputs: 
+	smiles (str)
+Outputs:
+	str
+79
+Name: scitooleval/CheckExplosiveness
+Description: Checks if a molecule with the given CAS number is explosive.
+Inputs: 
+	cas_number (str): The CAS number of the molecule.
+Outputs:
+	str: A Markdown formatted string indicating whether the molecule is explosive.
+80
+Name: scitooleval/SmilesToPdb
+Description: Convert the SMILES of the compound into 3D structures and return them in Markdown format.
+Inputs: 
+	smiles (str): The SMILES of the compound.
+Outputs:
+	str: The Markdown content with SMILES to 3D structures.
+81
+Name: scitooleval/SMILESToInChI
+Description: Convert the SMILES of the compound into 3D structures and return them in Markdown format.
+Inputs: 
+	smiles (str)
+Outputs:
+	str
+82
+Name: scitooleval/InChIKeyToSMILES
+Description: Convert the SMILES of the compound into 3D structures and return them in Markdown format.
+Inputs: 
+	inchikey (str)
+Outputs:
+	str
+83
+Name: scitooleval/InChIKeyToInChI
+Description: Convert the SMILES of the compound into 3D structures and return them in Markdown format.
+Inputs: 
+	inchikey (str)
+Outputs:
+	str
+84
+Name: scitooleval/InChIKeyToMOL
+Description: Convert the SMILES of the compound into 3D structures and return them in Markdown format.
+Inputs: 
+	inchikey (str)
+Outputs:
+	str
+85
+Name: scitooleval/IsValidInChIKey
+Description: Convert the SMILES of the compound into 3D structures and return them in Markdown format.
+Inputs: 
+	inchikey (str)
+Outputs:
+	str
+86
+Name: scitooleval/InChIToSMILES
+Description: Convert the SMILES of the compound into 3D structures and return them in Markdown format.
+Inputs: 
+	inchi (str)
+Outputs:
+	str
+87
+Name: scitooleval/InChIToInChIKey
+Description: Convert the SMILES of the compound into 3D structures and return them in Markdown format.
+Inputs: 
+	inchi (str)
+Outputs:
+	str
+88
+Name: scitooleval/InChIToCSID
+Description: Convert the SMILES of the compound into 3D structures and return them in Markdown format.
+Inputs: 
+	inchi (str)
+Outputs:
+	str
+89
+Name: scitooleval/SMILEStoSELFIES
+Description: Convert the SMILES of the compound into 3D structures and return them in Markdown format.
+Inputs: 
+	smiles (str)
+Outputs:
+	str
+90
+Name: scitooleval/SELFIEStoSMILES
+Description: Convert the SMILES of the compound into 3D structures and return them in Markdown format.
+Inputs: 
+	selfies (str)
+Outputs:
+	str
+91
+Name: scitooleval/RandomMoelcule
+Description: Convert the SMILES of the compound into 3D structures and return them in Markdown format.
+Inputs: 
+	length (str)
+Outputs:
+	str
+92
+Name: scitooleval/Length_SELFIES
+Description: Convert the SMILES of the compound into 3D structures and return them in Markdown format.
+Inputs: 
+	selfies (str)
+Outputs:
+	str
+93
+Name: scitooleval/Split_SELFIES
+Description: Convert the SMILES of the compound into 3D structures and return them in Markdown format.
+Inputs: 
+	selfies (str)
+Outputs:
+	str
+94
+Name: scitooleval/ExplainAtomPairScore
+Description: Explain the pair score for a directly connected atom pair in a molecule.
+Inputs: 
+	molecule (str): SMILES representation of the molecule.	        atom_idx1 (int): Index of the first atom.	        atom_idx2 (int): Index of the second atom.
+Outputs:
+	str: A Markdown string explaining the pair score, or an error message.
+95
+Name: scitooleval/GetAtomPairFingerprintAsBitVect
+Description: Generate the atom pair fingerprint of a molecule as a SparseBitVect. 
+    This fingerprint represents the presence of atom pairs, not just their counts.
+Inputs: 
+	molecule (str): SMILES representation of the molecule.
+Outputs:
+	str: Markdown formatted string of the bit vector fingerprint, or an error message.
+96
+Name: scitooleval/AssignPattyTypes
+Description: Assign Patty types to the atoms of a molecule.
+Inputs: 
+	molecule (Mol): RDKit molecule object.
+Outputs:
+	str: Markdown formatted string listing the Patty types of each atom, or an error message.
+97
+Name: scitooleval/ExplainAtomCode
+Description: Explain the code for a specific atom in a molecule, including chirality by default.
+Inputs: 
+	molecule (str): SMILES representation of the molecule.	        atom_idx (int): Index of the atom to explain.	        include_chirality (bool): Whether to include chirality in the explanation. Default is True.
+Outputs:
+	str: Markdown formatted string explaining the atom code, or an error message.
+98
+Name: scitooleval/TestMolecule
+Description: Perform a series of tests on a molecule, including sanitization, removal of hydrogens,
+    and canonicalization check. This function helps in validating the molecule's structure 
+    and consistency.
+Inputs: 
+	smiles (str): SMILES representation of the molecule.
+Outputs:
+	str: A string summarizing the test results. Returns 'Valid and consistent molecule structure.'
+        if tests are passed, otherwise provides an error code indicating the type of issue encountered.
+99
+Name: scitooleval/ConvertSdfToCsv
+Description: Convert a single SDF file to a CSV file and provide a download link.
+Inputs: 
+	sdf_file (str): Path to the SDF file.
+Outputs:
+	str: A Markdown string with a link to the converted CSV file, or an error message.
+100
+Name: scitooleval/ShowMol
+Description: Generate a molecule image from its SMILES representation and embed it directly in Markdown.
+Inputs: 
+	smiles (str): A SMILES representation of the molecule to be displayed.
+Outputs:
+	str: A Markdown string with embedded molecule image, or an error message.
+101
+Name: scitooleval/TypeAtomsInMolecule
+Description: Assigns EState types to each atom in a molecule based on its SMILES representation.
+Inputs: 
+	smiles (str): A SMILES representation of the molecule.
+Outputs:
+	str: A Markdown formatted string describing the EState types of atoms in the molecule, or an error message.
+102
+Name: scitooleval/CalculateEstateIndices
+Description: Calculate EState indices for each atom in a molecule based on its SMILES representation.
+Inputs: 
+	smiles (str): A SMILES representation of the molecule.
+Outputs:
+	str: A Markdown formatted string describing the EState indices of atoms in the molecule, or an error message.
+103
+Name: scitooleval/CalculateEstateVsa
+Description: Calculate EState VSA indices for a molecule based on its SMILES representation.
+Inputs: 
+	smiles (str): A SMILES representation of the molecule.
+Outputs:
+	str: A Markdown formatted string describing the EState VSA indices of the molecule, or an error message.
+104
+Name: scitooleval/GenerateEstateFingerprint
+Description: Generate the EState fingerprint for a molecule based on its SMILES representation.
+Inputs: 
+	smiles (str): A SMILES representation of the molecule.
+Outputs:
+	str: A Markdown formatted string describing the EState fingerprint of the molecule, or an error message.
+105
+Name: scitooleval/ExtractRotatableDihedralsFromSdf
+Description: Extract rotatable dihedrals from a molecule in an SDF file.
+Inputs: 
+	sdffile (str): The file path of the SDF file containing the molecule.
+Outputs:
+	str: A Markdown formatted string listing the indices of atoms forming each 
+             rotatable dihedral in the molecule, or an error message.
+106
+Name: scitooleval/CalculateMolecularCenter
+Description: Calculate the geometric center of a molecule from an SDF file.
+Inputs: 
+	sdffile (str): The file path of the SDF file containing the molecule.
+Outputs:
+	str: A Markdown formatted string describing the x, y, and z coordinates 
+             of the molecular center, or an error message.
+107
+Name: scitooleval/CalculateUsrcatScores
+Description: Calculate USRCAT scores and Tanimoto coefficients for molecules in an SDF file.
+Inputs: 
+	sdf_path (str): The file path of the SDF file containing the molecules.
+Outputs:
+	str: A Markdown formatted string summarizing the USRCAT scores and Tanimoto 
+             coefficients for molecule pairs, or an error message.
+108
+Name: scitooleval/CalculateShapeSimilarity
+Description: Calculate shape similarity scores using USRCAT for a list of molecules defined by their SMILES.
+Inputs: 
+	smiles_list (list): A list of SMILES strings representing the molecules.
+Outputs:
+	str: A Markdown formatted string summarizing the SMILES strings, their indices, and 
+             the USRCAT scores for each pair of molecules, or an error message.
+109
+Name: scitooleval/CalculatePmi
+Description: Calculate the normalized principal moments of inertia (NPR1 and NPR2) for a molecule.
+Inputs: 
+	smiles (str): A SMILES representation of the molecule.
+Outputs:
+	str: A Markdown formatted string describing the NPR1 and NPR2 values of the molecule, or an error message.
+110
+Name: scitooleval/CalculateDistanceMatrix
+Description: Calculate the distance matrix for a list of molecules based on their fingerprints.
+Inputs: 
+	smiles_list (list of str): A list of SMILES strings representing the molecules.
+Outputs:
+	str: A Markdown formatted string representing the distance matrix, or an error message.
+111
+Name: scitooleval/ClusterMolecules
+Description: Clusters molecules based on their fingerprints and returns the clustering results in Markdown format.
+Inputs: 
+	smiles_list (list of str): A list of SMILES strings representing the molecules.	        metric (callable): A function to calculate the distance or similarity between fingerprints.	        algorithm_id (int): Identifier for the clustering algorithm to be used.
+Outputs:
+	str: A Markdown formatted string representing the clustering results, or an error message.
+112
+Name: scitooleval/ProcessFingerprintMol
+Description: Process the molecular fingerprint generated by FingerprintMol function.
+Inputs: 
+	mol (rdkit.Chem.rdchem.Mol): The molecule object to fingerprint.	        fingerprinter (function, optional): The fingerprinting function to use. Defaults to Chem.RDKFingerprint.
+Outputs:
+	str: A Markdown formatted string representing the molecular fingerprint in binary or hexadecimal format.
+113
+Name: scitooleval/FingerprintsFromSmiles
+Description: Generate fingerprints for a list of SMILES strings.
+Inputs: 
+	smiles_list (list of str): List of SMILES strings.	        fingerprinter (function, optional): The fingerprinting function to use. Defaults to Chem.RDKFingerprint.
+Outputs:
+	str: A Markdown formatted string representing the fingerprints of the molecules.
+114
+Name: scitooleval/FoldFingerprintFromSmiles
+Description: Generate a fingerprint from a SMILES string, fold it using a provided function, and provide detailed information.
+Inputs: 
+	smiles (str): The SMILES string of the molecule.	        tgtDensity (float, optional): The target density to achieve by folding. Defaults to 0.3.	        minSize (int, optional): The minimum size of the fingerprint after folding. Defaults to 64.
+Outputs:
+	str: A Markdown formatted string representing the original and folded fingerprints with additional details.
+115
+Name: scitooleval/GetRdkFingerprintFromSmiles
+Description: Generate an RDKit fingerprint from a SMILES string using default parameters.
+Inputs: 
+	smiles (str): The SMILES string of the molecule.
+Outputs:
+	str: A Markdown formatted string representing the RDKit fingerprint in binary format.
+116
+Name: scitooleval/GetFraggleSimilarity
+Description: Calculate the Fraggle similarity between two molecules represented by SMILES strings.
+Inputs: 
+	smiles1 (str): The SMILES string of the first molecule (query molecule).	        smiles2 (str): The SMILES string of the second molecule (reference molecule).	        tverskyThresh (float, optional): Tversky threshold for similarity. Defaults to 0.8.
+Outputs:
+	str: A Markdown formatted string representing the Fraggle similarity and the matching substructure.
+117
+Name: scitooleval/GenerateFraggleFragments
+Description: Generate all possible Fraggle fragmentations for a molecule represented by a SMILES string.
+Inputs: 
+	smiles (str): The SMILES string of the molecule.
+Outputs:
+	str: A Markdown formatted string representing the list of possible fragmentations.
+118
+Name: scitooleval/CheckValidRingCut
+Description: Check if the molecule represented by a SMILES string is a valid ring cut.
+Inputs: 
+	smiles (str): The SMILES string of the molecule.
+Outputs:
+	str: A message indicating whether the molecule is a valid ring cut or not.
+119
+Name: scitooleval/BuildAtomPairFpFromSmiles
+Description: Generate an Atom Pair Fingerprint from a SMILES string and display the results in a readable format.
+Inputs: 
+	smiles (str): The SMILES string of the molecule.
+Outputs:
+	str: A detailed message representing the Atom Pair Fingerprint.
+120
+Name: scitooleval/BuildTorsionsFpFromSmiles
+Description: Generate a Torsions Fingerprint from a SMILES string.
+Inputs: 
+	smiles (str): The SMILES string of the molecule.
+Outputs:
+	str: A detailed message representing the Torsions Fingerprint.
+121
+Name: scitooleval/BuildRdkitFpFromSmiles
+Description: Generate an RDKit fingerprint from a SMILES string.
+Inputs: 
+	smiles (str): The SMILES string of the molecule.
+Outputs:
+	str: A detailed message representing the RDKit fingerprint.
+122
+Name: scitooleval/BuildPharm2DFpFromSmiles
+Description: Generate a Pharm2D fingerprint from a SMILES string.
+Inputs: 
+	smiles (str): The SMILES string of the molecule.	        fdef_file (str, optional): Path to the feature definition file. If None, use RDKit default.
+Outputs:
+	str: A detailed message representing the Pharm2D fingerprint.
+123
+Name: scitooleval/BuildMorganFpFromSmiles
+Description: Generate a Morgan fingerprint from a SMILES string.
+Inputs: 
+	smiles (str): The SMILES string of the molecule.
+Outputs:
+	str: A detailed message representing the Morgan fingerprint.
+124
+Name: scitooleval/BuildAvalonFpFromSmiles
+Description: Generate an Avalon fingerprint from a SMILES string.
+Inputs: 
+	smiles (str): The SMILES string of the molecule.
+Outputs:
+	str: A detailed message representing the Avalon fingerprint.
+125
+Name: scitooleval/ConvertSmilesToInchi
+Description: Converts a SMILES string to its corresponding InChI string.
+Inputs: 
+	smiles (str): A SMILES representation of the molecule.
+Outputs:
+	str: A Markdown formatted string describing the InChI representation of the molecule.
+             If an error occurs during conversion, an error message is returned.
+126
+Name: scitooleval/GenerateMolKeyFromSmiles
+Description: Generates a molecular key for a given molecule represented by a SMILES string.
+Inputs: 
+	smiles (str): A SMILES representation of the molecule.
+Outputs:
+	str: A Markdown formatted string describing the molecular key.
+             If an error occurs during the process, an error message is returned.
+127
+Name: scitooleval/GetStereoCodeFromSmiles
+Description: Generates the stereo code for a given molecule represented by a SMILES string.
+Inputs: 
+	smiles (str): A SMILES representation of the molecule.
+Outputs:
+	str: A Markdown formatted string describing the stereo code of the molecule.
+             If an error occurs during the process, an error message is returned.
+128
+Name: scitooleval/GetPatternFingerprint
+Description: This tool is used to generate a pattern fingerprint for a molecule. The pattern fingerprint is a bit vector that encodes the presence or absence of particular substructures in the molecule. The substructures are defined by SMARTS patterns. The SMARTS patterns are converted to molecular fingerprints and then combined to generate the pattern fingerprint.
+Inputs: 
+	smiles (str): A SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the fingerprint results， or an error message.
+129
+Name: scitooleval/CanSerialize
+Description: This tool is used to check if a TautomerQuery object can be serialized.
+Inputs: 
+	smiles (str): a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the serialization result, or an error message.
+130
+Name: scitooleval/AssignCIPLabels
+Description: This tool is used to assign CIP labels to the atoms in a molecule. The CIP labels are used to describe the stereochemistry of the molecule. The labels are assigned based on the 3D structure of the molecule.
+Inputs: 
+	smiles (str): a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the CIP labels, or an error message.
+131
+Name: scitooleval/Enumerate
+Description: The rdkit.Chem.rdMolEnumerator.Enumerate function is used to perform enumeration on a given molecule and returns a MolBundle object containing multiple molecules generated during the enumeration process.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the enumeration results, or an error message.smiles = smiles.replace(" ", "").replace("
+", "").replace("'", "").replace(""", "").replace('.), '
+132
+Name: scitooleval/Deprotect
+Description: The rdkit.Chem.rdDeprotect.Deprotect function removes protecting groups from a molecule, returning the deprotected version.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the deprotected SMILES, or an error message.
+133
+Name: scitooleval/CondenseAbbreviationSubstanceGroups
+Description: This tool finds and replaces abbreviation substance groups in a molecule, resulting in a compressed version of the molecule where the abbreviations are expanded.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the condensation results, or an error message.smiles = smiles.replace(" ", "").replace("
+", "").replace("'", "").replace(""", "").replace('.), '
+134
+Name: scitooleval/SlnToSmiles
+Description: This tool is used to convert a SLN string to a SMILES string. Input SMILES directly without any other characters.
+Inputs: 
+	sln: a SLN string. Input SLN directly without any other characters.
+Outputs:
+	str: A markdown string wtih the SMILES, or an error message.
+135
+Name: scitooleval/CreateShingling
+Description: This tool is used to create a shingling for a molecule.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the shingling, or an error message.
+136
+Name: scitooleval/EncodeMolecule
+Description: This tool creates an MHFP vector from a molecule  using MHFP encoder, capturing structural information of the molecule.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the MinHashed Fingerprints.
+137
+Name: scitooleval/EncodeSECFP
+Description: This tool creates an SECFP vector from a molecule using SECFP encoder, capturing structural information of the molecule.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the SECFP vector, or an error message.
+138
+Name: scitooleval/GetBCUT
+Description: This tool computes the 2D BCUT descriptors for a given molecule, representing mass, Gasteiger charge, Crippen logP, and Crippen MR values.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the BCUT2D descriptors, or an error message.
+139
+Name: scitooleval/GetAutocorrelation2D
+Description: This tool computes the 2D autocorrelation descriptors for a given molecule, capturing the spatial arrangement of atoms in the molecule.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the 2D autocorrelation descriptors vector, or an error message.
+140
+Name: scitooleval/GetAutocorrelation3D
+Description: This tool computes the 3D autocorrelation descriptors for a given molecule, capturing the spatial arrangement of atoms in the molecule.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the 3D autocorrelation descriptors vector, or an error message.
+141
+Name: scitooleval/GetAsphericity
+Description: This tool calculates the asphericity descriptor for a molecule, which measures how much the molecule deviates from a perfectly spherical shape.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih asphericity descripto(a float value), or an error message.
+142
+Name: scitooleval/GetChi0n
+Description: This tool calculates the chi^0 (chi-zero) cluster index, which represents a topological descriptor related to molecular branching.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih chi^0 (chi-zero) cluster index(a float value), or an error message.
+143
+Name: scitooleval/GetChi0v
+Description: This function calculates the Chi^0v (Chi-zero-v) valence molecular graph index for a molecule, which is used to describe the topology of the molecule. It returns a float value.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih chi^0 (chi-zero) cluster index(a float value), or an error message.
+144
+Name: scitooleval/GetChi1n
+Description: This tool calculates the chi^1 (chi-one) cluster index, which represents a topological descriptor related to molecular branching.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih chi^1 (chi-one) cluster index(a float value), or an error message.
+145
+Name: scitooleval/GetChi1v
+Description: This function calculates the Chi^1v (Chi-one-v) valence molecular graph index for a molecule, which is used to describe the topology of the molecule. It returns a float value.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih chi^1 (chi-one) cluster index(a float value), or an error message.
+146
+Name: scitooleval/GetChi2n
+Description: This tool calculates the chi^2 (chi-two) cluster index, which represents a topological descriptor related to molecular branching.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih chi^2 (chi-two) cluster index(a float value), or an error message.
+147
+Name: scitooleval/GetChi2v
+Description: This function calculates the Chi^2v (Chi-two-v) valence molecular graph index for a molecule, which is used to describe the topology of the molecule. It returns a float value.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih chi^2 (chi-two) cluster index(a float value), or an error message.
+148
+Name: scitooleval/GetCoulombMat
+Description: This tool calculates the Coulomb matrix for a molecule, which represents the electrostatic interactions between atoms in the molecule.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the Coulomb matrix, or an error message.
+149
+Name: scitooleval/GetCrippenDescriptors
+Description: This function calculates the Wildman-Crippen logP and MR (molecular refractivity) values for a given molecule in RDKit.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the Wildman-Crippen logp and mr values, or an error message.
+150
+Name: scitooleval/GetEEMCharges
+Description: This function computes the EEM (Electronegativity Equalization Method) atomic partial charges for a given molecule using its atomic properties.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih a list of partial charges assigned to each atom in the molecule, or an error message.
+151
+Name: scitooleval/GetEccentricity
+Description: This function calculates the eccentricity of a molecule, which is a measure of its shape.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the eccentricity value(a float value), or an error message.
+152
+Name: scitooleval/GetExactMolceularWeight
+Description: This function calculates the exact molecular weight of a molecule, which is the sum of the atomic weights of all atoms in the molecule.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the exact molecular weight(a float value), or an error message.
+153
+Name: scitooleval/GetFractionCSP3
+Description: This function calculates the fraction of sp3-hybridized carbon atoms in a molecule, which is a measure of its shape.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the fraction of sp3-hybridized carbon atoms(a float value), or an error message.
+154
+Name: scitooleval/GetGETAWAY
+Description: This function calculates the GETAWAY descriptors for a molecule, which capture the shape and size of the molecule.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the GETAWAY descriptors, or an error message.
+155
+Name: scitooleval/GetHallKierAlpha
+Description: This function calculates the Hall-Kier alpha index for a molecule, which is a measure of its shape.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the Hall-Kier alpha index(a float value), or an error message.
+156
+Name: scitooleval/GetInertialShapeFactor
+Description: This function calculates the Inertial Shape Factor of a molecule, which is a measure of its shape. The Inertial Shape Factor ranges from 0 to 1, where values closer to 1 indicate a more spherical shape and values closer to 0 indicate a more linear shape.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the inertial shape factor(a float value), or an error message.
+157
+Name: scitooleval/GetKappa1
+Description: This function computes the Kappa1 (κ1) value of a molecule, which is a topological descriptor representing its shape complexity or branching degree. The Kappa1 value is a floating-point number calculated based on the molecular graph topology.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the Kappa1 value(a float value), or an error message.
+158
+Name: scitooleval/GetKappa2
+Description: This function computes the Kappa2 (κ2) value of a molecule, which is a topological descriptor representing its shape complexity or branching degree. The Kappa2 value is a floating-point number calculated based on the molecular graph topology.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the Kappa2 value(a float value), or an error message.
+159
+Name: scitooleval/GetKappa3
+Description: This function computes the Kappa3 (κ3) value of a molecule, which is a topological descriptor representing its shape complexity or branching degree. The Kappa3 value is a floating-point number calculated based on the molecular graph topology.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the Kappa3 value(a float value), or an error message.
+160
+Name: scitooleval/GetLabuteASA
+Description: This function calculates the Labute accessible surface area (ASA) value for a molecule, which is a measure of the solvent-accessible surface area of the molecule.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the Labute ASA value(a float value), or an error message.
+161
+Name: scitooleval/GetMolFormula
+Description: This function calculates the molecular formula of a molecule, which is a string representing the number and type of atoms in the molecule.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the molecular formula, or an error message.
+162
+Name: scitooleval/GetMORSE
+Description: This tool calculates the Molecule Representation of Structures based on Electron diffraction (MORSE) descriptors for a given molecule. MORSE descriptors provide a representation of molecular structures based on electron diffraction concepts.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih a list containing the calculated MORSE descriptors, or an error message.
+163
+Name: scitooleval/GetNPR1
+Description: This function calculates the NPR1 (Normalized Principal Moments Ratio) descriptor for a molecule, which serves as a descriptor for the distribution of charges within the molecule.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the NPR1 value(a float value), or an error message.
+164
+Name: scitooleval/GetNPR2
+Description: This function calculates the NPR2 (Normalized Principal Moments Ratio) descriptor for a molecule, which serves as a descriptor for the distribution of charges within the molecule.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the NPR2 value(a float value), or an error message.
+165
+Name: scitooleval/GetAliphaticCarbocyclesNum
+Description: This function calculates the number of aliphatic carbocycles in a molecule. Aliphatic carbocycles are cyclic structures that contain at least one non-aromatic bond.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih an integer representing the count of such carbocycles, or an error message.
+166
+Name: scitooleval/GetAliphaticHeterocyclesNum
+Description: This function calculates the number of aliphatic heterocycles in a molecule. Aliphatic heterocycles are cyclic structures that contain at least one non-aromatic bond and at least one heteroatom (an atom other than carbon).
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih an integer representing the count of such aliphatic heterocycles, or an error message.
+167
+Name: scitooleval/GetAliphaticRingsNum
+Description: This tool calculates the number of aliphatic rings in a molecule. Aliphatic rings are ring structures that contain at least one non-aromatic bond.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih an integer representing the count of such aliphatic rings, or an error message.
+168
+Name: scitooleval/GetAmideBondsNum
+Description: This function calculates the number of amide bonds in a molecule. Amide bonds are chemical bonds formed between a carbonyl group and an amino group.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih an integer representing the count of such amide bonds, or an error message.
+169
+Name: scitooleval/GetAromaticCarbocyclesNum
+Description: This function calculates the number of aromatic carbocycles in a molecule. Aromatic carbocycles are cyclic structures composed entirely of carbon atoms with alternating single and double bonds (aromaticity) in at least one ring.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih an integer representing the count of such aromatic carbocycles, or an error message.
+170
+Name: scitooleval/GetAromaticHeterocyclesNum
+Description: This function calculates the number of aromatic heterocycles in a molecule. Aromatic heterocycles are cyclic structures that contain at least one heteroatom (an atom other than carbon) and exhibit aromaticity. es.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih an integer representing the count of such aromatic heterocycl, or an error message.
+171
+Name: scitooleval/GetAromaticRingsNum
+Description: This tool calculates the number of aromatic rings in a molecule. Aromatic rings are cyclic structures composed of alternating single and double bonds (aromaticity) and exhibit stability due to delocalization of electrons.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih an integer representing the count of such aromatic rings, or an error message.
+172
+Name: scitooleval/GetAtomStereoCentersNum
+Description: This function calculates the number of atom stereo centers in a molecule. Atom stereo centers are atoms that are chiral centers and are not part of a ring structure.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih an integer representing the total number of atomic stereocenters, or an error message.
+173
+Name: scitooleval/GetAtomsNum
+Description: This function calculates the number of atoms in a molecule.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih an integer representing the total number of atoms in the molecule, or an error message.
+174
+Name: scitooleval/GetBridgeheadAtomsNum
+Description: This function calculates the number of bridgehead atoms in a molecule. Bridgehead atoms are atoms that are part of a bridged ring structure.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih an integer representing the total number of bridgehead atoms, or an error message.
+175
+Name: scitooleval/GetHBANum
+Description: This function calculates the number of hydrogen bond acceptors (HBA) in a molecule. Hydrogen bond acceptors are atoms capable of forming hydrogen bonds by accepting a hydrogen atom.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih integer representing the count of such hydrogen bond acceptors, or an error message.
+176
+Name: scitooleval/GetHBDNum
+Description: This function calculates the number of hydrogen bond donors (HBD) in a molecule. Hydrogen bond donors are atoms capable of forming hydrogen bonds by donating a hydrogen atom.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih integer representing the count of hydrogen bond donors, or an error message.
+177
+Name: scitooleval/GetHeavyAtomsNum
+Description: This tool calculates the number of heavy atoms in a molecule. Heavy atoms are atoms other than hydrogen.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih integer representing the number of heavy atoms for a molecule, or an error message.
+178
+Name: scitooleval/GetHeteroatomsNum
+Description: This tool calculates the number of heteroatoms in a molecule. Heteroatoms are atoms other than carbon and hydrogen.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih an integer representing the total number of heteroatoms in the molecule, or an error message.
+179
+Name: scitooleval/GetHeterocyclesNum
+Description: This tool calculates the number of heterocycles in a molecule. Heterocycles are cyclic structures that contain at least one heteroatom (an atom other than carbon).
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih an integer representing the count of such heterocycles, or an error message.
+180
+Name: scitooleval/GetLipinskiHBANum
+Description: This tool calculates the number of Lipinski hydrogen bond acceptors (HBA) in a molecule, which is a measure used in drug-likeness evaluation according to Lipinski's rule of five. Lipinski's rule suggests that molecules with no more than five hydrogen bond acceptors tend to have better oral bioavailability.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih an integer representing the number of Lipinski H-bond acceptors, or an error message.
+181
+Name: scitooleval/GetLipinskiHBDNum
+Description: This tool calculates the number of Lipinski hydrogen bond donors (HBD) in a molecule, which is a measure used in drug-likeness evaluation according to Lipinski's rule of five.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih an integer representing the number of Lipinski H-bond donors, or an error message.
+182
+Name: scitooleval/GetRingsNum
+Description: This tool calculates the number of rings in a molecule.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih an integer representing the total number of rings in the molecule, or an error message.
+183
+Name: scitooleval/GetRotatableBondsNum
+Description: This tool calculates the number of rotatable bonds in a molecule. Rotatable bonds are single bonds that are not part of a ring structure and are not terminal (i.e., not connected to a hydrogen atom).
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih an integer representing the total number of rotatable bonds in the molecule, or an error message.
+184
+Name: scitooleval/GetSaturatedCarbocyclesNum
+Description: This function calculates the number of saturated carbocycles in a molecule. Saturated carbocycles are cyclic structures composed entirely of carbon atoms with single bonds (no double bonds).
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih an integer representing the count of such saturated carbocycles, or an error message.
+185
+Name: scitooleval/GetSaturatedHeterocyclesNum
+Description: This function calculates the number of saturated heterocycles in a molecule. Saturated heterocycles are cyclic structures that contain at least one heteroatom (an atom other than carbon) and are composed entirely of single bonds (no double bonds).
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih an integer representing the count of such saturated heterocycles, or an error message.
+186
+Name: scitooleval/GetSaturatedRingsNum
+Description: This tool calculates the number of saturated rings in a molecule. Saturated rings are ring structures composed entirely of single bonds (no double bonds).
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih an integer representing the count of such saturated rings, or an error message.
+187
+Name: scitooleval/GetSpiroAtomsNum
+Description: This function calculates the number of spiro atoms in a molecule. Spiro atoms are atoms that are part of a spiro ring structure, which consists of two rings that share a single atom.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih an integer representing the total number of spiro atoms, or an error message.
+188
+Name: scitooleval/GetUnspecifiedAtomStereoCentersNum
+Description: This tool calculates the number of unspecified atomic stereocenters in a molecule. Unspecified atomic stereocenters are atoms that have the potential to be stereocenters but lack explicit specification of their stereochemistry.
+Inputs: 
+	smiles: a SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih an integer representing the total number of unspecified atom stereo centers, or an error message.
+189
+Name: scitooleval/GenerateRDKFingerprintsFromCSV
+Description: This tool calculates the number of unspecified atomic stereocenters in a molecule. Unspecified atomic stereocenters are atoms that have the potential to be stereocenters but lack explicit specification of their stereochemistry.
+Inputs: 
+	csv_name (str)
+Outputs:
+	
+190
+Name: scitooleval/GenerateMorganfingerprintsFromCSV
+Description: Generate morgan fingerprints for the SMILES strings in a CSV file and save to a new CSV file.
+Inputs: 
+	csv_name: file name of the input CSV containing SMILES strings.
+Outputs:
+	str: Message indicating the completion of processing and the path to the output CSV file.
+    
+    Note: Your input only needs to contain the file name, without any additional information. For example, your input should be "filename.csv" instead of "csv_name='filename.csv'"
+191
+Name: scitooleval/GenerateElectricalDescriptorsFromCSV
+Description: Generate electrical RDKit descriptors for the SMILES strings in a CSV file and save to a new CSV file.
+Inputs: 
+	input_csv: Path to the input CSV file containing SMILES strings.	        output_csv: Path where the output CSV file will be saved.
+Outputs:
+	str: Message indicating the completion of processing and the path to the output CSV file.
+192
+Name: scitooleval/MLPClassifier
+Description: General MLP classifier function that predicts based on processed feature files.
+Inputs: 
+	csv_name: The name of the test data feature file for prediction.	                  For example: 'chemsmiles_test_electrical_descriptors.csv' or 'demo_test_Morgan_fingerprints.csv'.
+Outputs:
+	str: A string describing the accuracy of the model on the training set and test set.
+193
+Name: scitooleval/AdaBoostClassifier
+Description: General AdaBoost classifier function that predicts based on processed feature files.
+Inputs: 
+	csv_name: The name of the test data feature file for prediction.	                  For example: 'chemsmiles_test_electrical_descriptors.csv' or 'demo_test_Morgan_fingerprints.csv'.
+Outputs:
+	str: A string containing the model's accuracy on the training set and test set, in markdown format.
+194
+Name: scitooleval/RandomForestClassifier
+Description: General Random Forest classifier function that predicts based on processed feature files.
+Inputs: 
+	csv_name: The name of the test data feature file for prediction.	                  For example: 'chemsmiles_test_electrical_descriptors.csv' or 'demo_test_Morgan_fingerprints.csv'.
+Outputs:
+	str: A string containing the model's accuracy on the training set and test set, in markdown format.
+195
+Name: scitooleval/RunSuZuKiReactionExperiment
+Description: This function performs an automated Suzuki Reaction experiment by iteratively optimizing experimental parameters using Bayesian optimization.
+Inputs: 
+	num_iterations (int): Number of iterations for Bayesian optimization. Default is 5.
+Outputs:
+	str: A markdown string with the results of the experiment.
+196
+Name: scitooleval/AssignOxidationNumbers
+Description: Adds the oxidation number/state to the atoms of a molecule as property OxidationNumber on each atom.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string wtih smiles of molecular, or an error message.
+197
+Name: scitooleval/CalculatePBF
+Description: This tool calculates the PBF (plane of best fit) descriptor for a given molecule. PBF is a molecular descriptor that characterizes the flatness or planarity of a molecule. It is calculated based on the arrangement of atoms in 3D space.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the PBF of the molecule(a float value), or an error message.
+198
+Name: scitooleval/CalculatePMI1
+Description: This tool calculates the first principal moment of inertia (PMI1) for a given molecule. PMI1 is a molecular descriptor used to characterize the shape and spatial distribution of atoms in a molecule. PMI1 measures the asymmetry or elongation of a molecule along its principal axis. It provides information about the molecule's overall shape and can be useful in various computational chemistry and drug design applications.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the PMI1 of the molecule(a float value), or an error message.
+199
+Name: scitooleval/CalculatePMI2
+Description: This tool is designed to compute the PMI2 (Partial Molecular Information 2) value of a molecule, which serves as a descriptor indicating the shape and structure of the molecule.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the PMI2 of the molecule(a float value), or an error message.
+200
+Name: scitooleval/CalculatePMI3
+Description: This tool is designed to compute the PMI3 (Partial Molecular Information 3) value of a molecule, which serves as a descriptor characterizing the shape and structure of the molecule.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the PMI3 of the molecule(a float value), or an error message.
+201
+Name: scitooleval/CalculatePhi
+Description: This tool calculates the Phi (φ) angle of a molecule, which is a torsional angle describing the rotation about a single bond.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the Phi angle of the molecule(a float value), or an error message.
+202
+Name: scitooleval/CalculateRDF
+Description: This tool calculates the RDF (Radial Distribution Function) descriptor for a given molecule. RDF is a molecular descriptor that characterizes the distribution of atoms in 3D space. It is calculated based on the distances between pairs of atoms in a molecule.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the RDF of the molecule(a list), or an error message.
+203
+Name: scitooleval/CalculateRadiusOfGyration
+Description: This tool is designed to compute the radius of gyration for a given molecule, providing insights into its overall shape and compactness.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the computed radius of gyration for the specified molecule(a float value), or an error message.
+204
+Name: scitooleval/CalculateSpherocityIndex
+Description: This function calculates the sphericity index for a given molecule. Sphericity index is a measure of how close the shape of a molecule resembles a perfect sphere.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the spherocity index of the molecule(a float value), or an error message.
+205
+Name: scitooleval/CalculateTPSA
+Description: This tool calculates the TPSA (Topological Polar Surface Area) descriptor for a given molecule, which is a measure of the accessible polar surface area in a molecule. TPSA is a molecular descriptor that characterizes the polarity and hydrophilicity of a molecule. It is calculated based on the distribution of polar atoms and bonds in a molecule.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the TPSA of the molecule(a float value), or an error message.
+206
+Name: scitooleval/CalculateWHIM
+Description: This tool calculates the WHIM (Weighted Holistic Invariant Molecular) descriptor for a given molecule. WHIM is a molecular descriptor that characterizes the 3D shape and electronic properties of a molecule. It is calculated based on the distribution of atomic properties and their spatial arrangement in a molecule.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the WHIM of the molecule(a list of float values), or an error message.
+207
+Name: scitooleval/CustomPropertyVSA
+Description: This function computes a custom property for a given molecule using the Van der Waals Surface Area (VSA) method, based on user-defined parameters.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the VSA of the molecule(a list of float values), or an error message.
+208
+Name: scitooleval/GetAtomFeature
+Description: This function computes a set of atom features for a given molecule, including atomic number, valence, and hybridization.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the atom features of the molecule(a list of dictionaries), or an error message.
+209
+Name: scitooleval/GetAtomPairFingerprint
+Description: This function computes the atom pair for a given molecule. The atom pair fingerprint is a molecular descriptor that characterizes the presence of pairs of atoms in a molecule.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the atom pair fingerprint of the molecule(a list of int values), or an error message.
+210
+Name: scitooleval/GetConnectivityInvariants
+Description: This tool computes connectivity invariants, similar to ECFP (Extended Connectivity Fingerprints), for a given molecule. These invariants serve as a fingerprint representation of the molecule's structural connectivity, aiding in tasks such as similarity comparison and molecular structure representation.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the connectivity invariants of the molecule(a list of int values), or an error message.
+211
+Name: scitooleval/GetFeatureInvariants
+Description: This tool computes feature invariants, similar to FCFP (Feature Centroid Fingerprints), for a given molecule. These invariants provide a fingerprint representation of the molecule's features, aiding in tasks such as similarity comparison and molecular structure analysis.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the feature invariants of the molecule(a list of int), or an error message.
+212
+Name: scitooleval/GetAtomPairCode
+Description: This function computes atom pair code (hash) for each atom in a molecular. The atom pair code is a molecular descriptor that characterizes the presence of pairs of atoms in a molecule.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the atom pair code (hash) for each atom(a list of int values), or an error message.
+213
+Name: scitooleval/GetHybridization
+Description: This function computes the hybridization of each atom in a molecule. Hybridization is a property of an atom that characterizes its electron configuration and bonding behavior.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the hybridization of each atom(a list of int values), or an error message.
+214
+Name: scitooleval/GetRingSystems
+Description: This function computes the ring systems of a molecule. A ring system is a set of rings that are connected to each other through shared atoms or bonds.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the ring systems of the molecule(a list of lists), or an error message.
+215
+Name: scitooleval/GetMACCSKeysFingerprint
+Description: This function computes the Molecular ACCess System keys fingerprint for a given molecule. The Molecular ACCess System keys fingerprint is a molecular descriptor that characterizes the presence of specific structural features in a molecule.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the Molecular ACCess System keys fingerprint of the molecule(a list of int values), or an error message.
+216
+Name: scitooleval/GetMorganFingerprint
+Description: This tool computes the Morgan fingerprint for a given molecule. The Morgan fingerprint is a widely used method to encode molecular structure information. It captures the local chemical environments around each atom up to a specified radius.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the Morgan fingerprint of the molecule(a list of int values), or an error message.
+217
+Name: scitooleval/GetTopologicalTorsionFingerprint
+Description: This tool computes the topological torsion fingerprint for a given molecule. The topological torsion fingerprint is a molecular descriptor that characterizes the presence of specific structural features in a molecule.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the topological torsion fingerprint of the molecule(a list of int values), or an error message.
+218
+Name: scitooleval/GetUSR
+Description: The tool computes the USR (Ultrafast Shape Recognition) descriptor for a given conformer of a molecule and returns it as a list.The USR descriptor is a numerical representation of the shape of a molecule. It captures the 3D shape of a molecule in a compact form, making it particularly useful for comparing molecular shapes efficiently.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the USR descriptor of the molecule(a list), or an error message.
+219
+Name: scitooleval/GetUSRCAT
+Description: This function is designed to compute the USRCAT (Ultrafast Shape Recognition with Coordinate Asymmetric Torsions) descriptor for a specified conformer of a molecule. The USRCAT descriptor is a compact representation of the molecular shape, which is useful for various cheminformatics applications such as similarity searching, clustering, and virtual screening.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the USRCAT descriptor of the molecule(a list), or an error message.
+220
+Name: scitooleval/AddHydrogens
+Description: This function is used to add hydrogen atoms to the molecular graph of a molecule.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the SMILES of the molecule with added hydrogens, or an error message.
+221
+Name: scitooleval/AddWavyBondsForStereoAny
+Description: This tool adds wavy bonds around double bonds with STEREOANY stereochemistry.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the SMILES of the molecule with added wava bonds, or an error message.
+222
+Name: scitooleval/AssignAtomChiralTagsFromStructure
+Description: This tool sets chiral tags for atoms of the molecular based on the molParity property. This ensures proper definition of the molecule's stereochemistry for further analysis or visualization.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the SMILES of the modified molecule, or an error message.
+223
+Name: scitooleval/AssignRadicals
+Description: This tool is used to assign radical counts to atoms within a molecule. It takes a molecule SMILES as input and modifies it, assigning appropriate numbers of radicals to each atom within the molecule.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the SMILES of the modified molecule, or an error message.
+224
+Name: scitooleval/AssignStereoChemistry
+Description: This tool is used for assigning Cahn–Ingold–Prelog (CIP) stereochemistry to atoms (R/S) and double bonds (Z/E) within a molecule. Chiral atoms will have a property _CIPCode indicating their chiral code.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the SMILES of the modified molecule, or an error message.
+225
+Name: scitooleval/GetAdjacencyMatrix
+Description: This tool is used to obtain the adjacency matrix of a molecule. The adjacency matrix is a mathematical representation of a molecule where rows and columns correspond to atoms, and matrix elements represent whether pairs of atoms are adjacent (connected by a bond) or not.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the adjacency matrix of the molecule, or an error message.
+226
+Name: scitooleval/GetAllowNontetrahedralChirality
+Description: This tool is used to determine whether recognition of non-tetrahedral chirality from 3D structures is enabled or not.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string indicating whether recognition of non-tetrahedral chirality from 3D structures is enabled, or an error message.
+227
+Name: scitooleval/GetDistanceMatrix
+Description: The tool computes the topological distance matrix for a given molecule. This matrix provides information about the shortest path between pairs of atoms in the molecular graph, essentially indicating how many bonds need to be traversed to move from one atom to another.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the distance matrix of the molecule, or an error message.
+228
+Name: scitooleval/GetFormalCharge
+Description: This tool is utilized to determine the total formal charge of a given molecule. Formal charge is a concept in chemistry that describes the net charge of an atom or a molecule, considering the redistribution of electrons based on electronegativity differences.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the formal charge of the molecule, or an error message.
+229
+Name: scitooleval/GetFormalChargeOfAtoms
+Description: This tool is utilized to determine the formal charge of each atom in a given molecule.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the formal charge of each atom in the molecule, or an error message.
+230
+Name: scitooleval/GetMolFrags
+Description: This tool identifies disconnected fragments within a molecule and returns them as atom identifiers or molecules. It allows for flexible representation and manipulation of the fragments in further analysis.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with a tuple containing the atom identifiers or molecules for each disconnected fragment within the molecule, or an error message.
+231
+Name: scitooleval/GetUseLegacyStereoPerception
+Description: This tool identifies disconnected fragments within a molecule and returns them as atom identifiers or molecules. It allows for flexible representation and manipulation of the fragments in further analysis.
+Inputs: 
+	smiles (str)
+Outputs:
+	
+232
+Name: scitooleval/HapticBondsToDative
+Description: This tool is used to convert a molecule that represents haptic bonds using a dummy atom with a dative bond to a metal atom into a molecule with explicit dative bonds from the atoms of the haptic group to the metal atom.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the SMILES of the modified molecule, or an error message.
+233
+Name: scitooleval/HasQueryHs
+Description: This tool is used to check if a molecule contains query H (hydrogen) atoms. Query hydrogens are special types of hydrogen atoms that are used to represent specific chemical environments or constraints in a molecule.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string indicating whether the molecule contains query hydrogens, or an error message.
+234
+Name: scitooleval/Kekulize
+Description: This tool is used to perform Kekulization on a molecule. Kekulization is the process of converting aromatic bonds in a molecule to alternating single and double bonds, following the Kekulé structure representation.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the SMILES of the kekulized molecule, or an error message.
+235
+Name: scitooleval/MergeQueryHs
+Description: This tool is used to merge hydrogen atoms into their neighboring atoms as query atoms. This function is typically used to modify molecules by replacing explicit hydrogen atoms with query atoms, allowing for more flexible substructure searching or atom mapping.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the SMILES of the modified molecule, or an error message.
+236
+Name: scitooleval/MurckoDecompose
+Description: This tool is used to perform a Murcko decomposition on a molecule and return the scaffold. The Murcko scaffold represents the core structure of a molecule by removing side chains and retaining the ring system.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the SMILES of the core scaffold, or an error message.
+237
+Name: scitooleval/RemoveHydrogens
+Description: This tool is used to remove hydrogen atoms from a molecule's graph. This function is typically used to simplify molecular representations for further analysis or visualization.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the SMILES of the modified molecule, or an error message.
+238
+Name: scitooleval/RemoveStereochemistry
+Description: This tool is used to remove all stereochemistry information from a molecule. Stereochemistry information in a molecule refers to the spatial arrangement of atoms or groups around a stereocenter or a double bond.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the SMILES of the modified molecule, or an error message.
+239
+Name: scitooleval/SetAromaticity
+Description: This tool is used to perform aromaticity perception on a molecule, which means determining the aromaticity of atoms and bonds in the molecule. Aromaticity is a chemical property that describes the stability and reactivity of certain ring structures in organic molecules.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the SMILES of the modified molecule, or an error message.
+240
+Name: scitooleval/SetBondStereoFromDirections
+Description: This tool is used to set the cis/trans stereochemistry on double bonds based on the directions of neighboring bonds.
+Inputs: 
+	smiles: a SMILES string. Please Input SMILES directly without any other characters。
+Outputs:
+	str: A markdown string with the SMILES of the modified molecule, or an error message.
+241
+Name: scitooleval/DetermineBondOrders
+Description: The tool is used to determine the bond orders between atoms in a molecule based on their atomic coordinates. It assigns the connectivity information to the molecule by disregarding pre-existing bonds. This function is useful for inferring the chemical bonds in a molecule when the bond information is not already available or needs to be updated based on the 3D structure of the molecule.
+Inputs: 
+	smiles (str): A SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the results.
+242
+Name: scitooleval/DetermineBonds
+Description: The tool is used to determine the bond orders between atoms in a molecule based on their atomic coordinates. It assigns the connectivity information to the molecule by disregarding pre-existing bonds. This function is useful for inferring the chemical bonds in a molecule when the bond information is not already available or needs to be updated based on the 3D structure of the molecule.
+Inputs: 
+	smiles (str): A SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the results.
+243
+Name: scitooleval/IsSubstructof
+Description: This tool is used to check if a molecule(target) is a substructure of another molecule(template). It returns true if the molecule is a substructure of the other molecule and false otherwise. The substructure search is performed by matching the SMARTS pattern of the query molecule to the target molecule.
+Inputs: 
+	target_template (str): Two SMILES strings separated by a '.'. The first SMILES string is the target molecule, and the second SMILES string is the template molecule.	                                Input SMILES directly without any other characters like CR(C)C(=O)O.CC(=O)O.
+Outputs:
+	str: A markdown string wtih the results, or an error message.
+244
+Name: scitooleval/GetTemplateMolecule
+Description: This tool is used to get the template molecule from a TautomerQuery object.
+Inputs: 
+	smiles (str): A SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the template smiles, or an error message.
+245
+Name: scitooleval/GetTautomers
+Description: This tool obtains all possible tautomers of a TautomerQuery object. Tautomers are molecules that have the same atomic composition but differ in the connectivity of atoms. Retrieving all possible tautomers can help in understanding and analyzing changes in chemical reactions and molecular conformations.
+Inputs: 
+	template_smiles (str): A SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the number of tautomers and tautomer SMILES, or an error message.
+246
+Name: scitooleval/GetModifiedAtoms
+Description: This tool is used to get the modified atoms of a TautomerQuery object. Modified atoms are atoms that have changed their connectivity in the tautomerization process.
+Inputs: 
+	smiles (str): A SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the modified atoms, or an error message.
+247
+Name: scitooleval/GetModifiedBonds
+Description: This tool is used to get the modified bonds of a TautomerQuery object. Modified bonds are bonds that have changed their connectivity in the tautomerization process.
+Inputs: 
+	smiles (str): A SMILES string. Input SMILES directly without any other characters.
+Outputs:
+	str: A markdown string wtih the modified bonds, or an error message.
+248
+Name: scitooleval/GetSubstructMatches
+Description: This tool is to search for substructures in a given target molecule that match the tautomer query.
+Inputs: 
+	smiles_pair (str): Two SMILES strings separated by a '.'. The first SMILES string is the target molecule, and the second SMILES string is the template molecule.
+Outputs:
+	str: A markdown string wtih the substruct matches, or an error message.

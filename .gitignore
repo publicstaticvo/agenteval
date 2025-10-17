@@ -1,0 +1,8 @@
+*.pdf
+*.zip
+*.tar.gz
+*.json
+.idea
+.ipynb_checkpoints
+__pycache__
+prev_projects

@@ -1,0 +1,18 @@
+name,description,inputs,outputs
+Name2SMILES,Converts a chemical name to its SMILES representation.,name (str): The chemical name.,smiles (str): The SMILES string.
+SMILES2Name,Converts a SMILES string to its chemical name.,smiles (str): The SMILES string.,name (str): The chemical name.
+MolFromSmiles,Creates an RDKit molecule object from a SMILES string.,smiles (str): The SMILES string.,mol (rdkit.Chem.rdchem.Mol): The molecule object.
+MolToMolBlock,Get the Mol block from a SMILES string.,smiles (str): The SMILES string of the molecule.,mol_block (str): The Mol block of the molecule.
+GetMolWT,Get the molecular weight of a molecule from a SMILES string.,smiles (str): The SMILES string of the molecule.,molecular_weight (float): The molecular weight of the molecule.
+GetHBA,Get the number of hydrogen bond acceptors of a molecule from a SMILES string.,smiles (str): The SMILES string of the molecule.,hba (int): The number of hydrogen bond acceptors.
+GetHBD,Get the number of hydrogen bond donors of a molecule from a SMILES string.,smiles (str): The SMILES string of the molecule.,hbd (int): The number of hydrogen bond donors.
+GetNumRotatableBonds,Get the number of rotatable bonds of a molecule from a SMILES string.,smiles (str): The SMILES string of the molecule.,rotatable_bonds (int): The number of rotatable bonds.
+GetTPSA,Get the topological polar surface area of a molecule from a SMILES string.,smiles (str): The SMILES string of the molecule.,tpsa (float): The topological polar surface area.
+GetLogP,Get the logP of a molecule from a SMILES string.,smiles (str): The SMILES string of the molecule.,logp (float): The logP of the molecule.
+GetMorganFingerprint,Get the Morgan fingerprint of a molecule from a SMILES string.,smiles (str): The SMILES string of the molecule.,fingerprint (numpy.ndarray): The Morgan fingerprint.
+TanimotoSimilarity,Calculate the Tanimoto similarity between two molecules from their SMILES strings.,"smiles1 (str): The SMILES string of the first molecule.
+smiles2 (str): The SMILES string of the second molecule.",similarity (float): The Tanimoto similarity.
+FindSubstructure,Find if a molecule contains a substructure.,"smiles (str): The SMILES string of the molecule.
+substructure_smiles (str): The SMILES string of the substructure.",has_substructure (bool): Whether the molecule contains the substructure.
+RXNPredict,Predict the product of a reaction from the SMILES strings of the reactants.,"reactants_smiles (str): The SMILES strings of the reactants, separated by a dot.",product_smiles (str): The SMILES string of the product.
+Retrosynthesis,Perform retrosynthesis on a molecule to find possible reactants.,product_smiles (str): The SMILES string of the product.,reactants_smiles (list): A list of possible reactant SMILES strings.
