@@ -18,6 +18,8 @@ for k in ['cstcloud', 'deepseek']:
     for m in json_key[k]['models']:
         key[m] = {"base_url": json_key[k]['domain'], "api_key": json_key[k]['key']}
 
+errors = {}
+
 
 def get_message(line, func):
     if func: return func(line)
@@ -31,7 +33,15 @@ def get_message(line, func):
     return messages
 
 
-def call_by_request(messages, model, base_url, api_key, args, retry=5):
+def call_by_request(messages, model, args, retry=5):
+    base_url, api_key = None, None
+    if model in key:
+        base_url = key[model]['base_url']
+        api_key = key[model]['api_key']
+    if args.base_url: base_url = args.base_url
+    if args.api_key and args.api_key != "EMPTY": api_key = args.api_key
+    if not base_url or not api_key: return
+
     while retry > 0:
         try:
             sampling_params = {
@@ -60,32 +70,30 @@ def call_by_request(messages, model, base_url, api_key, args, retry=5):
             retry -= 1
             print(f"Error: {e}, Retry: {retry}")
             time.sleep(10)    
+    
+    if model in errors: errors[model] += 1
+    else: errors[model] = 1
 
 
 def call(line, args, output_file="", retry=5):
     # 需要：每个输入样本line的格式为{"system_prompt": ..., "user_prompt": ...}
     # 确保：将一条{"system_prompt": ..., "user_prompt": ..., "greedy": "输出结果"}的数据以"a+"的方式写入输出文件。
     # 为了节省输入文件大小，可以将组装system_prompt和user_prompt的步骤放在此处。 
-    messages = prompt_for_query(line) 
+    messages = prompt_for_scoring(line) 
     if "request_models" in line:
         models = line['request_models']
-        assert all(m in key for m in models), (models, list(key.keys()))
         samples = {m: [] for m in models}
         for m in models:
-            info = key[m]
-            base_url, api_key = info['base_url'], info['api_key']
-            if args.base_url: base_url = args.base_url
-            if args.api_key and args.api_key != "EMPTY": api_key = args.api_key
+            if m in errors and errors[m] >= args.model_error_limit: continue
             for _ in range(args.n_samples):
-                text = call_by_request(messages, m, base_url, api_key, args, retry)
+                text = call_by_request(messages, m, args, retry)
                 if text: samples[m].append(text)
         if args.n_samples == 1:
             samples = {m: (v[0] if v else "") for m, v in samples.items()}
     else:
-        assert args.model and args.base_url and args.api_key and args.api_key != 'EMPTY'
         samples = []
         for _ in range(args.n_samples):            
-            text = call_by_request(messages, args.model, args.base_url, args.api_key, args, retry)
+            text = call_by_request(messages, args.model, args, retry)
             if text: samples.append(text)
     if output_file:
         if args.n_samples == 1 and "request_models" not in line: 
@@ -107,6 +115,7 @@ if __name__ == "__main__":
     parser.add_argument('--inputs', type=str, required=True)
     parser.add_argument('--max_tokens', type=int, default=1024)
     parser.add_argument('--model', type=str, default="gpt-oss-120b")
+    parser.add_argument('--model_error_limit', type=int, default=100)
     parser.add_argument('--n_samples', type=int, default=1)
     parser.add_argument('--n_workers', type=int, default=60)
     parser.add_argument('--output', type=str, default="output.jsonl")
