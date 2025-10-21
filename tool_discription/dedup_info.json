@@ -1,0 +1,17 @@
+{
+  "chemcrow/Name2SMILES": "cactus/CommonNameToSMILES",
+  "chemcrow/GetMolWT": "cactus/CalculateMolecularWeight",
+  "chemcrow/GetTPSA": "cactus/CalculateTPSA",
+  "chemcrow/GetLogP": "cactus/CalculateLogP",
+  "chemistrytools/calculate_compound_molar_mass": "chemlib/calculate_compound_molar_mass",
+  "scitooleval/NameToSMILES": "cactus/CommonNameToSMILES",
+  "scitooleval/RXNPredict": "chemcrow/RXNPredict",
+  "scitooleval/RXNRetrosynthetic": "chemcrow/Retrosynthesis",
+  "scitooleval/RXNPredictProperties": "chemcrow/RXNPredict",
+  "scitooleval/SMILESToWeight": "cactus/CalculateMolecularWeight",
+  "scitooleval/MolSimilarity": "chemcrow/TanimotoSimilarity",
+  "scitooleval/GetMorganFingerprint": "chemcrow/GetMorganFingerprint",
+  "scitooleval/DetermineBonds": "scitooleval/DetermineBondOrders",
+  "scitooleval/GetUseLegacyStereoPerception": "scitooleval/GetAllowNontetrahedralChirality",
+  "scitooleval/CalculateTPSA": "cactus/CalculateTPSA"
+}

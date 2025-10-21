@@ -1,8 +1,9 @@
 *.pdf
 *.zip
 *.tar.gz
-*.json
 .idea
+.txt
 .ipynb_checkpoints
 __pycache__
 prev_projects
+generated
