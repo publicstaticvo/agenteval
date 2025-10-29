@@ -38,7 +38,6 @@ Please transform the above question into new questions from 2-3 different perspe
 ```
 
 """
-
     return [{'role': 'user', 'content': prompt}]
 
 
@@ -71,4 +70,47 @@ After your analysis, provide the evaluation in the following JSON structure:
 - Consider the question in the context of current scientific knowledge and practices.
 
 For the question: {x['q']}"""
+    return [{'role': 'user', 'content': prompt}]
+
+
+def prompt_for_topics(x):
+    prompt = f"""You are a professional scientific AI agent researcher, currently collaborating with us at DeepMind. We are training a model that scores relevance between papers and review topics. Your task is to generate a set of closely related review topics or keywords for a given academic paper based on its title and abstract, and this will help in constructing training data for the model.
+
+### Input
+You will be provided with the title and abstract of an academic paper.
+
+### Instructions
+Analyze the provided paper's title and abstract, then generate a comprehensive set of review topics that capture the essential aspects of the research. Consider the following angles when generating topics:
+
+1. Analyze the paper's title and abstract to identify core themes, contributions, and context.  
+2. Generate 5 review topics or keywords that are tightly related to the paper. These should reflect aspects such as:  
+   - **Research field**: The broad domain or discipline (e.g., "machine learning," "computational biology").  
+   - **Research methods**: The methodologies employed (e.g., "deep learning," "empirical analysis," "simulation-based studies").  
+   - **Proposed method categories**: Specific techniques or approaches introduced (e.g., "reinforcement learning algorithms," "data augmentation strategies").  
+   - **Research value**: The practical or theoretical significance (e.g., "applications in healthcare," "theoretical foundations of AI").  
+   - **Main contributions**: Key novelties or breakthroughs (e.g., "neural network architectures," "cross-disciplinary integration").  
+3. Ensure topics are specific, relevant, and representative of the paper's content. Avoid overly broad or generic terms.  
+4. If the paper lacks clear information in certain angles, focus on the most prominent aspects.  
+
+**Output Format:**  
+Return the results in JSON format with the following structure:  
+```json  
+{{  
+  "review_topics": ["topic1", "topic2", "topic3", ...]
+}}  
+```  
+
+**Example:**  
+For a paper titled "Attention Is All You Need" with an abstract discussing transformer models, your output might look like:  
+```json  
+{{  
+  "review_topics": ["transformer models", "attention mechanisms in NLP", "neural network architectures", "sequence-to-sequence learning"]  
+}}  
+```  
+
+Now, process the following paper and provide your response in the specified JSON format.  
+- Title: {x['title']}  
+- Abstract: {x['abstract']}  
+
+"""
     return [{'role': 'user', 'content': prompt}]

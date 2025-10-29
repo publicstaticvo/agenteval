@@ -47,7 +47,7 @@ def call_by_request(messages, model, args, retry=5):
             sampling_params = {
                 "model": model,
                 "messages": messages,
-                "temperature": 0.6,
+                "temperature": args.temperature,
                 "top_p": 0.95, "top_k": 20,
                 "max_tokens": args.max_tokens,
                 "stream": args.stream
@@ -79,7 +79,7 @@ def call(line, args, output_file="", retry=5):
     # 需要：每个输入样本line的格式为{"system_prompt": ..., "user_prompt": ...}
     # 确保：将一条{"system_prompt": ..., "user_prompt": ..., "greedy": "输出结果"}的数据以"a+"的方式写入输出文件。
     # 为了节省输入文件大小，可以将组装system_prompt和user_prompt的步骤放在此处。 
-    messages = prompt_for_scoring(line) 
+    messages = prompt_for_topics(line) 
     if "request_models" in line:
         models = line['request_models']
         samples = {m: [] for m in models}
@@ -120,6 +120,7 @@ if __name__ == "__main__":
     parser.add_argument('--n_workers', type=int, default=60)
     parser.add_argument('--output', type=str, default="output.jsonl")
     parser.add_argument('--stream', action='store_true')
+    parser.add_argument('--temperature', type=float, default=0.6)
     args = parser.parse_args()
     t = time.time()
     print(f"使用并行进程数: {args.n_workers}")
