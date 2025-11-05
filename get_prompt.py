@@ -114,3 +114,73 @@ Now, process the following paper and provide your response in the specified JSON
 
 """
     return [{'role': 'user', 'content': prompt}]
+
+
+def prompt_for_precise_topics(x):
+    prompt = f"""You are a professional scientific AI agent researcher, currently collaborating with us at DeepMind. We are training a model that scores relevance between papers and review topics.
+
+Your task is to generate a set of **highly specific** review topics by comparing a paper against one of its foundational citations.
+
+### Critical Challenge to Solve
+We are building a dataset of `(topic, positive_paper, hard_negative_paper)`. Your topics **must** be highly relevant to the `positive_paper` but **irrelevant** or **minimally relevant** to the `hard_negative_paper`.
+
+This is the only way to create clean training data. Your goal is to find topics that describe the specific, novel contribution of the positive paper.
+
+### Input
+You will be provided with two papers:
+1.  **positive_paper**: The main paper we want to find topics for.
+2.  **hard_negative_paper**: A foundational (e.g., cited) paper that is in the same field but lacks the specific novelty of the positive paper.
+
+### Instructions
+1.  Analyze both papers. Identify the core shared field, and then, more importantly, identify the **novel contribution** that the `positive_paper` introduces.
+2.  Generate 5 review topics or keywords that are about this **specific, novel contribution**. Focus on:
+    * **Specific Problem:** The precise, niche problem this paper is solving (e.g., "reducing memory usage in LLMs" not "machine learning").
+    * **Novel Methodology:** The *new* technique, model, or algorithm this paper introduces (e.g., "Spike-and-Slab Sparse Attention" not "attention mechanisms").
+    * **Unique Contributions:** The specific findings that differentiate this paper from its predecessors (e.g., "achieving SOTA on 8-bit quantization" not "model quantization").
+3.  **Crucially, every topic you generate must be a bad description of the `hard_negative_paper`**. You must ask yourself, "Would a researcher looking for this topic be happy to find the hard negative paper?" If the answer is yes, the topic is too broad and you must discard it.
+    
+### Example
+
+#### Positive Paper
+- Title: "Lion: Evo-Optimized Optimizer for Large Transformer Models"
+- Abstract: (Describes a new optimizer, "Lion", found via an evolutionary search, which is simpler and more efficient than Adam for training Transformers.)
+
+#### Hard Negative Paper
+- Title: "Adam: A Method for Stochastic Optimization"
+- Abstract: (Describes the Adam optimizer, which computes adaptive learning rates for each parameter using first and second-order moments.)
+
+#### Analysis
+The LLM should see that both papers are about optimizers. The hard negative is "Adam." The positive paper introduces "Lion" as an *alternative* to Adam, found via "evolutionary search." The topics must be about this delta.
+
+* **BAD, (Overly Broad) Topics:**
+    * "Optimization Algorithms" (Relevant to both)
+    * "Stochastic Optimization" (Relevant to both)
+    * "Training Deep Learning Models" (Relevant to both)
+
+* **GOOD, (Specific) Topics:**
+    * "Lion Optimizer" (Specific to positive)
+    * "Evolutionary Search for Optimizers" (Specific to positive)
+    * "Alternatives to Adam Optimizer in LLMs" (Relevant to positive, irrelevant to negative)
+    * "Memory-Efficient Optimizers" (A key feature of Lion, not Adam)
+
+### Output Format
+Return the results in JSON format with the following structure:
+```json  
+{{  
+  "review_topics": ["topic1", "topic2", "topic3", ...]
+}}  
+```  
+
+### Your Turn
+Now, process the following paper and provide your response in the specified JSON format.  
+
+#### Positive Paper
+- Title: {x['positive']['title']}  
+- Abstract: {x['positive']['abstract']}  
+
+#### Hard Negative Paper
+- Title: {x['negative']['title']}  
+- Abstract: {x['negative']['abstract']}  
+
+"""
+    return [{'role': 'user', 'content': prompt}]

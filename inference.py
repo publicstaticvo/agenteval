@@ -1,14 +1,9 @@
 import json
-import os
-import glob
 import time
 import tqdm
 import argparse
-import regex
-import random
 import requests
 import multiprocessing
-from requests.exceptions import ConnectionError, Timeout, RequestException
 from get_prompt import *
 
 # load_api_key
@@ -105,7 +100,6 @@ def call(line, args, output_file="", retry=5):
         with open(output_file, 'a+', encoding="utf-8") as fp:
             fp.write(json.dumps(line, ensure_ascii=False) + '\n')
     return samples
-    
 
 
 if __name__ == "__main__":
