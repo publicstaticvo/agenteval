@@ -74,7 +74,7 @@ def call(line, args, output_file="", retry=5):
     # 需要：每个输入样本line的格式为{"system_prompt": ..., "user_prompt": ...}
     # 确保：将一条{"system_prompt": ..., "user_prompt": ..., "greedy": "输出结果"}的数据以"a+"的方式写入输出文件。
     # 为了节省输入文件大小，可以将组装system_prompt和user_prompt的步骤放在此处。 
-    messages = prompt_for_topics(line) 
+    messages = prompt_for_precise_topics(line) 
     if "request_models" in line:
         models = line['request_models']
         samples = {m: [] for m in models}
