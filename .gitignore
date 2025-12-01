@@ -2,10 +2,13 @@
 *.zip
 *.txt
 *.out
+*.json
 *.tar.gz
 .idea
 .ipynb_checkpoints
+.langgraph_api
 __pycache__
 prev_projects
 generated
+queries
 inputs

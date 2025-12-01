@@ -1,3 +1,4 @@
+import os
 import json
 import time
 import tqdm
@@ -90,16 +91,17 @@ def call(line, args, output_file="", retry=5):
         for _ in range(args.n_samples):            
             text = call_by_request(messages, args.model, args, retry)
             if text: samples.append(text)
-    if output_file:
-        if args.n_samples == 1 and "request_models" not in line: 
-            if samples: line["greedy"] = samples[0]
-            else: return []
-        else: 
-            line["samples"] = samples
-            if "request_models" in line: del line['request_models']
+    if args.n_samples == 1 and "request_models" not in line: 
+        if samples: line["greedy"] = samples[0]
+        else: return []
+    else: 
+        line["samples"] = samples
+        if "request_models" in line: del line['request_models']        
+    if os.name != "nt" and output_file:
         with open(output_file, 'a+', encoding="utf-8") as fp:
             fp.write(json.dumps(line, ensure_ascii=False) + '\n')
-    return samples
+    return line
+        
 
 
 if __name__ == "__main__":
@@ -126,5 +128,11 @@ if __name__ == "__main__":
                 if not x: continue
                 pending_results.append(pool.apply_async(call, (x, args, args.output)))
         print("finish pending results")
-        for async_result in tqdm.tqdm(pending_results): async_result.get()
+        if os.name == "nt":
+            with open(args.output, 'w+', encoding="utf-8") as fp:
+                for async_result in tqdm.tqdm(pending_results): 
+                    line = async_result.get()            
+                    fp.write(json.dumps(line, ensure_ascii=False) + '\n')
+        else:
+            for async_result in tqdm.tqdm(pending_results): async_result.get()
     print(f"Time: {time.time() - t:.4f}")

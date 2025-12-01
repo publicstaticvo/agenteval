@@ -184,3 +184,85 @@ Now, process the following paper and provide your response in the specified JSON
 
 """
     return [{'role': 'user', 'content': prompt}]
+
+
+def prompt_for_chemistry_tools_filtering(x):
+    prompt = f"""You are given a complete list of tools from the ToolUniverse platform.  
+Each line contains:  
+<tool_name> | <short_description>
+
+Your task is to **screen the entire list line-by-line** and **return only the tools that are related to chemistry**.  
+Chemistry relevance includes (but is not limited to):
+- Small-molecule, drug, or materials data look-ups
+- SMILES, InChI, molecular fingerprints, descriptors
+- Reaction prediction, retrosynthesis, or reaction-condition recommendation
+- ADMET, toxicity, pharmacokinetics, dosing, drug-labelling
+- Quantum-chemical, DFT, or force-field calculations
+- Spectral prediction (NMR, MS, IR, UV, etc.)
+- Docking, binding-affinity, protein–ligand interaction
+- Catalyst design, catalytic cycle analysis
+- Polymer, battery, or solid-state materials property prediction
+- Any cheminformatics, molecular dynamics, or computational-chemistry utility
+
+**Instructions:**
+1. Read every line carefully.
+2. Decide **yes/no** for chemistry relevance; be permissive rather than strict.
+3. Output **only** the “yes” entries as valid JSON:
+   [
+     {{
+       "tool_name": "<exact name>",
+       "description": "<original description>",
+       "reason": "<one short sentence why it is chemistry>"
+     }},
+     ...
+   ]
+4. Do **not** add explanations outside the JSON block.
+5. If no tool qualifies, return an empty list [].
+
+Here is the list:
+{x}
+
+Provide your JSON result."""
+    return [{'role': 'user', 'content': prompt}]
+
+
+def prompt_for_chemistry_tool_filtering(x):
+    prompt = f"""You are an expert in chemistry and cheminformatics. Your task is to determine whether a given tool is related to the field of chemistry.
+
+**Chemistry-related tools include:**
+- Chemical compound databases (PubChem, ChEMBL, DrugBank, ZINC, etc.)
+- Molecular property calculation and prediction
+- Chemical structure analysis and visualization
+- Drug discovery and design tools
+- Molecular similarity and substructure search
+- Chemical reaction prediction and retrosynthesis
+- Quantum chemistry and computational chemistry
+- Spectroscopy and analytical chemistry tools
+- Chemical nomenclature and identifier conversion
+- Cheminformatics libraries (RDKit, OpenBabel, CDK, etc.)
+- Pharmacokinetics and toxicity prediction
+- Protein-ligand interactions and docking
+- Chemical synthesis planning
+- Materials chemistry and molecular dynamics
+- Metabolite and pathway analysis related to chemical structures
+
+**NOT chemistry-related:**
+- General biology tools (genomics, transcriptomics) unless specifically focused on chemical compounds
+- General machine learning or data analysis tools without chemistry focus
+- Medical diagnosis or clinical tools unless drug-related
+- General text processing or web search tools
+- General database tools unless specifically for chemical data
+
+**Instructions:**
+Analyze the following tool and respond with ONLY a valid JSON object in this exact format:
+{{
+  "is_chemistry_related": true/false,
+  "confidence": "high/medium/low",
+  "reasoning": "brief explanation",
+  "chemistry_subdomain": "specific area like 'drug discovery', 'molecular properties', 'chemical databases', etc. (or null if not chemistry-related)"
+}}
+
+**Tool to classify:**
+Tool Name: {x['name']}
+Tool Description: {x['desc']}"""
+    return [{'role': 'user', 'content': prompt}]
