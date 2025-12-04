@@ -28,8 +28,6 @@ from prompts import (
     CRITIC_SYSTEM, 
     CRITIC_USER,
 )
-import logging
-# logging.basicConfig(filename="chem.log")
 
 load_dotenv()
 
@@ -41,8 +39,8 @@ for k in ['cstcloud', 'deepseek']:
         key[m] = {"base_url": json_key[k]['domain'], "api_key": json_key[k]['key']}
 
 config = Config.from_yaml("chemistry.yaml")
-logging.info(config)
 model = config.model
+print(config, key[model])
 
 runtime = datetime.now().strftime('%Y%m%d_%H%M%S')
 
@@ -105,7 +103,7 @@ def extract_json(text: str) -> dict:
 def load_tools(tools_file: str) -> list:
     """加载工具描述文件"""
     if not tools_file or not os.path.exists(tools_file):
-        logging.warning(f"⚠️  工具文件不存在: {tools_file}")
+        print(f"⚠️  工具文件不存在: {tools_file}")
         return []
     
     try:
@@ -113,10 +111,10 @@ def load_tools(tools_file: str) -> list:
             data = json.load(f)
         
         tools = data if isinstance(data, list) else data.get("tools", [])
-        logging.info(f"✅ 加载了 {len(tools)} 个工具")
+        print(f"✅ 加载了 {len(tools)} 个工具")
         return tools
     except Exception as e:
-        logging.error(f"❌ 加载工具文件失败: {e}")
+        print(f"❌ 加载工具文件失败: {e}")
         return []
 
 
@@ -163,7 +161,7 @@ def save_result(result: dict, file_path: str) -> None:
         with open(file_path, 'a+', encoding='utf-8') as f:
             f.write(json.dumps(result, ensure_ascii=False) + "\n")
     except Exception as e:
-        logging.error(f"❌ 保存失败: {e}")
+        print(f"❌ 保存失败: {e}")
 
 
 def finalize_output(file_path: str) -> None:
@@ -178,7 +176,7 @@ def finalize_output(file_path: str) -> None:
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception as e:
-        logging.info(f"❌ 完成失败: {e}")
+        print(f"❌ 完成失败: {e}")
 
 
 # ==================== DeepSeek Client ====================
@@ -190,6 +188,7 @@ class DeepSeekClient:
             "Content-Type": "application/json"
         })
         self.url = f"{base_url.rstrip('/')}/v1/chat/completions"
+        print(self.url)
     
     def call(self, messages: list, temp: float = 0.7, max_tok: int = 1024) -> str:
         """调用 API"""
@@ -202,20 +201,17 @@ class DeepSeekClient:
         
         for attempt in range(3):
             try:
-                resp = self.session.post(self.url, json=payload, timeout=20)
-                if resp.status_code != 200:
-                    raise RuntimeError(f"API error {resp.status_code}")
-                
+                resp = self.session.post(self.url, json=payload, timeout=600)
+                resp.raise_for_status()                
                 content = resp.json()["choices"][0]["message"]["content"]
                 return content
             except Exception as e:
                 if attempt < 2:
-                    sleep(1.5 * (attempt + 1))
-                else:
-                    raise RuntimeError(f"API failed after 3 attempts: {e}")
+                    sleep(1.5 ** (attempt + 1))
+        return ""
 
 
-client = DeepSeekClient(key[model]['api_key'], f"{key[model]['base_url']}/v1")
+client = DeepSeekClient(key[model]['api_key'], key[model]['base_url'])
 
 
 # ==================== Nodes ====================
@@ -226,25 +222,26 @@ def generate_node(state: State) -> State:
         state.tools = load_tools(state.tools_file)
         state.tools_context = format_tools_context(state.tools)
         state.queries = extract_queries(state.input_data)
-        logging.info(len(state.queries), state.queries[0])
         state.results = []
         state.idx = 0
         state.output_file = config.workflow_output
         
-        logging.info(f"\n[输入] 提取 {len(state.queries)} 个查询")
+        print(f"\n[输入] 提取 {len(state.queries)} 个查询")
         for i, q in enumerate(state.queries, 1):
-            logging.info(f"  {i}. {q}")
-        logging.info()
+            print(f"  {i}. {q}")
+            if i == 10: break
+        print()
     
     # 每轮都要设置当前查询，因为可能从 output_node 循环回来。
     if state.idx < len(state.queries):
         state.query = state.queries[state.idx]
         state.iteration += 1
-        logging.info(f"\n{'='*70}\n[处理] #{state.idx+1}/{len(state.queries)}: {state.query}\n[第 {state.iteration} 轮优化]\n")
+        print(f"\n{'='*70}\n[处理] #{state.idx+1}/{len(state.queries)}: {state.query}\n[第 {state.iteration} 轮优化]\n")
     
+    user = GENERATE_USER.format(tools=state.tools_context, query=state.query, critic="请根据上述工具")
     messages = [
         {"role": "system", "content": GENERATE_SYSTEM},
-        {"role": "user", "content": GENERATE_USER.format(state=state)}
+        {"role": "user", "content": user}
     ]
     
     raw = client.call(messages, temp=0.6, max_tok=4096)
@@ -253,8 +250,8 @@ def generate_node(state: State) -> State:
     state.generated = parsed.get("optimized_query", raw.strip())
     state.tools_used = parsed.get("tools_required", [])
     
-    logging.info(f"[生成] 轮 {state.iteration}: {state.generated[:100]}...")
-    logging.info(f"  工具({len(state.tools_used)}): {', '.join(state.tools_used) or '无'}")
+    print(f"[生成] 轮 {state.iteration}: {state.generated[:100]}...")
+    print(f"  工具({len(state.tools_used)}): {', '.join(state.tools_used) or '无'}")
     
     return state
 
@@ -288,13 +285,13 @@ def critic_node(state: State) -> State:
     state.feedback = parsed.get("detailed_feedback", "")
     
     dim_scores = parsed.get("dimension_scores", {})
-    logging.info(f"[评估] 总分: {state.score:.0f}/100")
-    logging.info(f"  学术严谨性: {dim_scores.get('academic_rigor', 0)}/25")
+    print(f"[评估] 总分: {state.score:.0f}/100")
+    print(f"  学术严谨性: {dim_scores.get('academic_rigor', 0)}/25")
     ind = " ✓" if len(tools_used) == 3 else " ⚠️"
-    logging.info(f"  工具利用: {dim_scores.get('utilization', 0)}/35 | 工具数: {len(tools_used)}/3{ind}")
-    logging.info(f"  可执行性: {dim_scores.get('executability', 0)}/30")
-    logging.info(f"  创新性: {dim_scores.get('innovation_impact', 0)}/10")
-    logging.info(f"  反馈: {state.feedback}")
+    print(f"  工具利用: {dim_scores.get('utilization', 0)}/35 | 工具数: {len(tools_used)}/3{ind}")
+    print(f"  可执行性: {dim_scores.get('executability', 0)}/30")
+    print(f"  创新性: {dim_scores.get('innovation_impact', 0)}/10")
+    print(f"  反馈: {state.feedback}")
     
     return state
 
@@ -302,14 +299,14 @@ def critic_node(state: State) -> State:
 def should_continue(state: State) -> Literal["output", "generate"]:
     """严格的质量判定"""
     if state.score >= 80 and len(state.tools_used) == 3:
-        logging.info(f"[判定] ✓ 达到发表级别 (3工具 + {state.score:.0f}分) → 输出")
+        print(f"[判定] ✓ 达到发表级别 (3工具 + {state.score:.0f}分) → 输出")
         return "output"
     
     if state.iteration >= 3:
-        logging.info(f"[判定] ✗ 达到最大迭代次数(3轮) → 输出")
+        print(f"[判定] ✗ 达到最大迭代次数(3轮) → 输出")
         return "output"
     
-    logging.info(f"[判定] ✗ 未达标准 (得分 {state.score:.0f}/80, 工具 {len(state.tools_used)}/3) → 继续")
+    print(f"[判定] ✗ 未达标准 (得分 {state.score:.0f}/80, 工具 {len(state.tools_used)}/3) → 继续")
     return "generate"
 
 
@@ -330,9 +327,9 @@ def output_node(state: State) -> State:
     # 实时保存单个结果
     save_result(result, state.output_file)
     
-    logging.info(f"\n[输出] ✅ 完成优化")
-    logging.info(f"  最终得分: {state.score:.0f} | 迭代: {state.iteration}")
-    logging.info(f"  优化查询: {state.generated[:100]}...")
+    print(f"\n[输出] ✅ 完成优化")
+    print(f"  最终得分: {state.score:.0f} | 迭代: {state.iteration}")
+    print(f"  优化查询: {state.generated[:100]}...")
     
     # 重置为下一个查询做准备
     state.idx += 1
@@ -357,14 +354,14 @@ def next_query(state: State) -> Literal["generate", "end"]:
     avg_score = sum(r.get("score", 0) for r in state.results) / total if total > 0 else 0
     total_iterations = sum(r.get("iteration", 0) for r in state.results)
     
-    logging.info(f"\n{'='*70}")
-    logging.info(f"[完成] ✅ 所有查询处理完毕")
-    logging.info(f"  总查询数: {total}")
-    logging.info(f"  达标数(≥80分): {passed}")
-    logging.info(f"  平均得分: {avg_score:.1f}/100")
-    logging.info(f"  总迭代次数: {total_iterations}")
-    logging.info(f"  结果已保存到: {state.output_file}")
-    logging.info(f"{'='*70}")
+    print(f"\n{'='*70}")
+    print(f"[完成] ✅ 所有查询处理完毕")
+    print(f"  总查询数: {total}")
+    print(f"  达标数(≥80分): {passed}")
+    print(f"  平均得分: {avg_score:.1f}/100")
+    print(f"  总迭代次数: {total_iterations}")
+    print(f"  结果已保存到: {state.output_file}")
+    print(f"{'='*70}")
     
     return "end"
 
@@ -398,5 +395,4 @@ def create_graph():
     return workflow.compile()
 
 
-create_graph().invoke()
-# {"input_data": config.first_output, "tools_file": config.tool_file}
+create_graph().invoke({"input_data": config.input_file, "tools_file": config.tool_file})

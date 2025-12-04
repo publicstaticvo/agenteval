@@ -1,13 +1,16 @@
 import os
-import json
 import re
-from datetime import datetime
+import json
+import time
+import tqdm
 from openai import OpenAI
 from dotenv import load_dotenv
+from functools import partial
+from concurrent.futures import ThreadPoolExecutor as TPE
 
 from config import Config
 from prompts import FIRST_QUERY
-import logging
+# import logging
 # logging.basicConfig(filename="chem.log")
 
 load_dotenv()
@@ -22,8 +25,9 @@ for k in ['cstcloud', 'deepseek']:
         key[m] = {"base_url": json_key[k]['domain'], "api_key": json_key[k]['key']}
 
 config = Config.from_yaml("chemistry.yaml")
-logging.info(config)
+print(config)
 model = config.model
+print(key[model])
 client = OpenAI(api_key=key[model]['api_key'], base_url=f"{key[model]['base_url']}/v1")
 
 
@@ -51,7 +55,7 @@ def load_tools_from_json(tools_file: str) -> dict:
     else:
         raise ValueError("工具文件格式错误：应为 {'tools': [...]} 或 [...].")
 
-    logging.info(f"✅ 已加载 {len(tools)} 个工具")
+    print(f"✅ 已加载 {len(tools)} 个工具")
     return {"tools": tools}
 
 
@@ -83,7 +87,7 @@ def format_tools_description(tools: list) -> str:
 # -----------------------------------------------
 # 生成针对工具的 Query
 # -----------------------------------------------
-def generate_queries_for_tools(tools: list, domain: str = None, n_queries: int = 5) -> list:
+def generate_queries_for_tools(seed_query: str, tools: list, n_queries: int = 5, retry: int = 5) -> list:
     """
     根据工具定义生成针对性的测试 query。
     
@@ -95,41 +99,39 @@ def generate_queries_for_tools(tools: list, domain: str = None, n_queries: int =
     Returns:
         List[str]: 生成的查询列表
     """
-    tools_desc = format_tools_description(tools)    
-    if not domain: domain = "科研数据处理"
-
-    logging.info(f"🧠 正在为 {domain} 生成 {n_queries} 个针对性 query...")
-    logging.info(f"   涉及工具数量: {len(tools)}")
+    tools_desc = format_tools_description(tools)
+    user = FIRST_QUERY.format(seed=seed_query, tools=tools_desc, n_queries=n_queries)
     
-    try:
-        response = client.chat.completions.create(
-            model="deepseek-chat",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "你是一个专业的测试数据生成助手，能够根据可用工具生成真实有效的用户查询。"
-                },
-                {
-                    "role": "user",
-                    "content": FIRST_QUERY.format(domain=domain, tools=tools_desc, n_queries=n_queries)
-                }
-            ],
-            temperature=0.8,
-            max_tokens=2500
-        )
+    while retry > 0:
+        try:
+            response = client.chat.completions.create(
+                model=config.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "你是一个专业的测试数据生成助手，能够根据可用工具生成真实有效的用户查询。"
+                    },
+                    {
+                        "role": "user",
+                        "content": user
+                    }
+                ],
+                temperature=1,
+                max_tokens=2500
+            )
+            
+            content = response.choices[0].message.content.strip()
+            queries = _parse_response(content)
+            
+            if not queries:
+                raise ValueError("生成的 query 为空")            
+            return queries
         
-        content = response.choices[0].message.content.strip()
-        queries = _parse_response(content)
-        
-        if not queries:
-            raise ValueError("生成的 query 为空")
-        
-        logging.info(f"✅ 成功生成 {len(queries)} 条 query")
-        return queries
-    
-    except Exception as e:
-        logging.info(f"❌ 调用 API 失败: {e}")
-        raise
+        except Exception as e:
+            retry -= 1
+            print(f"❌ 调用 API 失败: {e}，重试：{retry}")
+            time.sleep(10)
+    return []
 
 
 def _parse_response(content: str) -> list:
@@ -177,7 +179,7 @@ def _parse_response(content: str) -> list:
 # -----------------------------------------------
 # 保存 Query
 # -----------------------------------------------
-def save_queries_to_json(queries: list, domain: str, filename: str, tools_file: str = None) -> str:
+def save_queries_to_json(queries: list, filename: str, tools_file: str = None) -> str:
     """
     将生成的 query 保存到 JSON 文件。
     
@@ -191,7 +193,6 @@ def save_queries_to_json(queries: list, domain: str, filename: str, tools_file: 
     """
     
     data = {
-        "domain": domain,
         "count": len(queries),
         "tools_file": tools_file,
         "queries": queries
@@ -200,18 +201,18 @@ def save_queries_to_json(queries: list, domain: str, filename: str, tools_file: 
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     
-    logging.info(f"✅ 已保存 {len(queries)} 条 query 到 {filename}")
+    print(f"✅ 已保存 {len(queries)} 条 query 到 {filename}")
     return filename
 
 
 def display_queries(queries: list) -> None:
     """展示生成的 query。"""
-    logging.info("\n" + "="*70)
-    logging.info("📋 生成的查询列表：")
-    logging.info("="*70)
+    print("\n" + "="*70)
+    print("📋 生成的查询列表：")
+    print("="*70)
     for i, query in enumerate(queries, 1):
-        logging.info(f"\n[{i}] {query}")
-    logging.info("\n" + "="*70)
+        print(f"\n[{i}] {query}")
+    print("\n" + "="*70)
 
 
 # -----------------------------------------------
@@ -222,15 +223,26 @@ if __name__ == "__main__":
         # 获取工具文件路径加载工具
         tools = load_tools_from_json(config.tool_file).get("tools", [])
         if not tools:
-            logging.info("❌ 未找到有效的工具定义")
+            print("❌ 未找到有效的工具定义")
             exit(1)
         
+        # 加载种子query
+        with open(config.input_file, encoding='utf-8') as f: seed_queries = json.load(f)['queries']
+        
         # 生成 query
-        queries = generate_queries_for_tools(tools, config.domain, config.n_queries)
-        display_queries(queries)
-        save_queries_to_json(queries, config.domain, config.first_output, config.tool_file)
+        print(f"并行为{len(seed_queries)}个种子query生成工具query每个各{config.n_queries}个")
+        generate_funcion = partial(generate_queries_for_tools, tools=tools, n_queries=config.n_queries)
+        queries = []
+        for x in seed_queries:
+            generate_funcion(seed_query=x)
+        # with TPE(max_workers=20) as pool:
+        #     for result in tqdm.tqdm(pool.map(generate_funcion, seed_queries), total=len(seed_queries)):
+        #         queries.extend(result)
+        # print(f"✅ 成功生成 {len(queries)} 条 query")
+        # display_queries(queries[:5])
+        # save_queries_to_json(queries, config.first_output, config.tool_file)
         
     except KeyboardInterrupt:
-        logging.info("\n⚠️  用户中断")
+        print("\n⚠️  用户中断")
     except Exception as e:
-        logging.info(f"\n❌ 发生错误: {e}")
+        print(f"\n❌ 发生错误: {e}")

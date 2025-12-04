@@ -233,7 +233,6 @@ def prompt_for_chemistry_tool_filtering(x):
 - Chemical compound databases (PubChem, ChEMBL, DrugBank, ZINC, etc.)
 - Molecular property calculation and prediction
 - Chemical structure analysis and visualization
-- Drug discovery and design tools
 - Molecular similarity and substructure search
 - Chemical reaction prediction and retrosynthesis
 - Quantum chemistry and computational chemistry
@@ -265,4 +264,21 @@ Analyze the following tool and respond with ONLY a valid JSON object in this exa
 **Tool to classify:**
 Tool Name: {x['name']}
 Tool Description: {x['desc']}"""
+    return [{'role': 'user', 'content': prompt}]
+
+
+def prompt_for_topic_extract(x):
+    prompt = f"""You are a scientific keyword extractor.  
+Convert the following title or question into a **single concise phrase**  
+(≤ 10 words, no stopwords, no question marks, colon, or verbs like "write", "review").  
+Output topic only.
+
+Examples:
+Input:  What are the recent advances on hallucination detection in LLMs?
+Output: hallucination detection large language models
+Input:  Deep Learning for Computer Vision: A Survey
+Output: deep learning computer vision
+
+Input:  {x['query']}  
+Output: """
     return [{'role': 'user', 'content': prompt}]

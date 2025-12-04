@@ -2,7 +2,9 @@
 *.zip
 *.txt
 *.out
+*.log
 *.json
+*.jsonl
 *.tar.gz
 .idea
 .ipynb_checkpoints

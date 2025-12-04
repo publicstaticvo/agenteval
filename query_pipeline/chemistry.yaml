@@ -1,9 +1,7 @@
-input_file: 
-  - "chembench.txt"
-  - "gpqa.txt"
-tool_file: "chemistry_domain_tool_info.json"
-domain: "科研数据处理"
-n_queries: 5
-model: "qwen:235b"
-first_output: "queries/chemistry_first.json"
-workflow_output: "queries/chemistry_workflow_1.json"
+input_file: chem.json
+tool_file: chemistry_domain_tool_info.json
+n_queries: 4
+model: gpt-oss-120b
+critic_model: qwen3:235b
+first_output: queries/chemistry_first.json
+workflow_output: queries/chemistry_workflow.jsonl
