@@ -1,91 +1,136 @@
-FIRST_QUERY = """
-你是一个科研助手测试数据生成器，可以从较为容易的学科测试题目生成有挑战性、需要借助工具调用完成的科学研究课题。
+GENERATE_SYSTEM = """You are an experienced AI research assistant and research task architecture expert. Your core responsibility is to analyze excerpts from research papers provided by users, and in combination with available analytical tools, construct an actionable, logically rigorous, academically substantial research task with a comprehensive research plan.
 
-【原始题目】：
-{seed}
-
-【可用工具及功能】:
-{tools}
-
-任务要求：
-1. 根据上述可用工具，从给定的原始题目生成 {n_queries} 个实际的用户查询（query）
-2. 每个 query 应该能够通过调用上述工具中的一个或多个来完成
-3. 查询应该具有具体的科研背景和实用价值
-4. 不同的 query 应该充分利用不同的工具组合
-5. 输出格式：只输出一个 JSON 数组，每个元素是一个查询字符串，无需编号或解释
-
-输出示例格式：
-["查询1的具体内容", "查询2的具体内容", "查询3的具体内容"]
-
-现在生成 {n_queries} 个高质量的查询：
-"""
-
-GENERATE_SYSTEM = """你是一位资深的AI科研助手和查询优化专家。
-你的任务是根据可用的工具，将用户的查询转化为可执行性强、学术严谨的科研任务。
-🔴【重要】优化后的查询必须涉及并明确说明如何使用恰好 3 个不同的工具。"""
+🔴 [CORE REQUIREMENTS] 
+- Your research query must be sufficiently complex, academically profound, and scientifically valuable. 
+- Your proposal must explicitly specify how to systematically employ at least 3 different tools to solve or explore the research query derived from the paper excerpt."""
 
 GENERATE_USER = """
-可用工具：
+[AVAILABLE TOOLS]
 {tools}
 
-原始查询: {query}
+[ORIGINAL RESEARCH PAPER EXCERPT]
+{text}
 
-{critic}，优化该科研查询。🔴【必须】请选择并说明如何使用恰好 3 个可用工具来解决这个研究问题。
+Based on the above paper excerpt, construct a concrete, executable research task proposal.
+🔴 [MANDATORY] You must precisely select and detail how to orchestrate exactly 3 available tools to complete this research.
 
-返回 JSON 格式（仅 JSON）：
+Return in strict JSON format (JSON only, no other text):
 {{
-  "optimized_query": "优化后的查询",
-  "tools_required": ["name1", "name2", "name3"],
-  "research_scope": "研究范围",
-  "evaluation_metrics": ["指标1", "指标2"],
+  "new_research_query": "Detailed, clear description of the research query and objectives",
+  "required_tools": ["Tool A", "Tool B", "Tool C"],
+  "research_scope_and_steps": "Phase-by-phase explanation of research scope, methodology, and specific logic of tool utilization",
+  "evaluation_metrics": ["Metric 1", "Metric 2"]
 }}"""
 
-CRITIC_SYSTEM = """你是一位严苛的学术评审专家。
-🔴【重要】查询必须明确使用 3 个不同的工具。如果只使用少于 3 个工具，将大幅扣分。
-工具利用是核心评估维度，占比最大（0-35分）。"""
+CRITIC_SYSTEM = """You are a rigorous academic reviewer and evaluator.
+🔴 [CRITICAL] The query must explicitly utilize at least 3 different tools. If fewer than 3 tools are used, points will be significantly deducted.
+Tool utilization is the core evaluation dimension with the highest weight (0-35 points)."""
 
 CRITIC_USER = """
-【可用工具】
-{tools_info}
+[AVAILABLE TOOLS]
+{tools}
 
-【待评估查询】
+[RESEARCH QUESTION UNDER EVALUATION]
 {query}
 
-【工具使用情况】
-声明使用工具数: {num_tools}
-具体工具: {tools_used}
+[TOOL USAGE INFORMATION]
+Number of tools declared: {num_tools}
+Specific tools: {tools_used}
 
-请基于以下四个维度进行严格评分（总分 100）：
+Please conduct a rigorous evaluation based on the following four dimensions (Total: 100 points):
 
-1. **学术严谨性（0-25）**：
-   - 研究目标是否明确具体？是否包含量化指标？
-   - 是否遵循科学方法论（假设、方法、验证）？
-   - 术语使用是否准确规范？
+1. **Academic Rigor (0-25 points)**:
+   - Is the research query clearly defined and specific? Does it include quantifiable indicators?
+   - Does it follow scientific methodology (hypothesis, methods, validation)?
+   - Is terminology used accurately and appropriately?
 
-2. **工具充分利用（0-35）** 🔴【核心维度】：
-   - 基础分 20 分：必须使用 3 个可用工具
-   - 额外分 15 分：根据工具使用质量
-   - 是否明确说明了 3 个工具的具体用途？
-   - 工具之间是否形成有机的研究管道？
+2. **Comprehensive Tool Utilization (0-35 points)** 🔴 [CORE DIMENSION]:
+   - Base score of 20 points: Must use 3 available tools
+   - Additional 15 points: Based on quality of tool usage
+   - Are the specific purposes of all 3 tools clearly articulated?
+   - Do the tools form an organic research pipeline?
 
-3. **可执行性（0-30）**：
-   - 查询是否具体可行？是否包含明确的步骤或流程？
-   - 3个工具的使用步骤是否清晰可行？
-   - 预期成果是否清晰可测量？
+3. **Feasibility (0-30 points)**:
+   - Is the research query concrete and actionable? Does it include clear steps or workflow?
+   - Are the usage steps for all 3 tools clear and practical?
+   - Are the expected outcomes clearly measurable?
 
-4. **科研创新性与实用性（0-10）**：
-   - 研究问题是否有学术价值？
-   - 结果是否有实际应用潜力？
+4. **Scientific Innovation and Practical Value (0-10 points)**:
+   - Does the research query have academic merit?
+   - Do the results have real-world application potential?
 
-返回 JSON 格式（仅 JSON）：
+Return in JSON format (JSON only):
 {{
-  "总分": <0-100的整数>,
-  "各项评分": {{
-    "学术严谨性": <0-25>,
-    "工具充分利用": <0-35>,
-    "可执行性": <0-30>,
-    "科研创新性与实用性": <0-10>
+  "total_score": <integer from 0-100>,
+  "dimension_scores": {{
+    "academic_rigor": <0-25>,
+    "comprehensive_tool_utilization": <0-35>,
+    "feasibility": <0-30>,
+    "scientific_innovation_and_practical_value": <0-10>
   }},
-  "详细评析": "2-3句的详细评析",
-  "改进建议": "具体改进建议"
+  "detailed_evaluation": "2-3 sentences of detailed analysis",
+  "improvement_suggestions": "Specific recommendations for improvement"
 }}"""
+
+REVISE_SYSTEM = """You are an experienced AI research assistant and research task optimization expert. Your responsibility is to receive an existing research query with its proposal, modification suggestions, and the original paper context, then output an improved, more compliant new proposal.
+🔴 [CORE REQUIREMENT] Your optimized proposal must still adhere to the principle of "using at least 3 different tools" and ensure all modifications closely align with both the paper excerpt and the improvement suggestions."""
+
+REVISE_USER = """
+[AVAILABLE TOOLS]
+{tools}
+
+[ORIGINAL RESEARCH PAPER EXCERPT]
+{text}
+
+[PREVIOUS RESEARCH TASK PROPOSAL]
+{query}
+
+[RECEIVED IMPROVEMENT SUGGESTIONS]
+{critic}
+
+Based on the "improvement suggestions" above and staying closely aligned with the "original research paper excerpt," optimize and refine the "previous research task proposal."
+🔴 [MANDATORY] Ensure the new proposal still clearly specifies how to employ exactly 3 different tools.
+
+Return in strict JSON format (JSON only, no other text):
+{{
+  "new_research_query": "Detailed, clear description of the research query and objectives",
+  "required_tools": ["Tool A", "Tool B", "Tool C"],
+  "research_scope_and_steps": "Phase-by-phase explanation of research scope, methodology, and specific logic of tool utilization",
+  "evaluation_metrics": ["Metric 1", "Metric 2"]
+}}"""
+
+SELECT_SYSTEM = """
+You are a Scientific Data Engineer. Your goal is to prepare a "Reproduction Context" for a computational agent.
+I will provide:
+- Paper title
+- Abstract
+- Section titles (like "X. Title" or "X.Y. Title")
+- The index and the first sentence of each paragraphs.
+
+Task: Select 2 kind of paragraphs to form the context.
+1. **The Goal Source:** Select the paragraphs that best defines *why* the research was done (usually Introduction).
+2. **The Recipe Source:** Select the paragraphs that best defines *how* the computational experiments were performed.
+   - Look for paragraphs in sections with these keywords: "Computational Details", "Methodology", "Simulation Setup", "Docking Protocol".
+   - IGNORE paragraphs in sections like "Wet Lab", "Synthesis", or "Biological Assays" (our agent is purely computational).
+   - IGNORE paragraphs in "Results" and "Discussion" (these contain outcomes we want the agent to *discover*, not read).
+Remember to choose no more than 2 paragraphs for each kind. Our context is limited.
+
+Output Format: JSON with keys "goal_paragraph_indexes" and "recipe_paragraph_indexes", each with a list of paragraph indexes:
+```
+{{
+   "goal_paragraph_indexes": [3],
+   "recipe_paragraph_indexes": [6, 7]
+}}
+```
+"""
+
+SELECT_USER = """
+Paper Title: {title}
+[Start of the Paper Abstract]
+{abstract}
+[End of the Paper Abstract]
+
+[Start of the Paper Sections]
+{text}
+[End of the Paper Sections]
+"""

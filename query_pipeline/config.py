@@ -1,5 +1,8 @@
+"""
+config.py - config file
+"""
+
 import os
-import json
 import yaml
 from dataclasses import dataclass, field
 
@@ -16,10 +19,11 @@ class Config:
     input_file: str = "chem.txt"
     tool_file: str = "tools.json"
     n_queries: int = 5
-    model: str = "whatever"
     critic_model: str = "whatever"
     first_output: str = "first.json"
     workflow_output: str = "workflow.json"
+    model: LLMServerInfo = field(default_factory=LLMServerInfo)
+    critic_model: LLMServerInfo = field(default_factory=LLMServerInfo)
 
     @classmethod
     def from_yaml(cls, config_path):
@@ -29,8 +33,9 @@ class Config:
             input_file=config['input_file'],
             tool_file=config['tool_file'],
             n_queries=config['n_queries'],
-            model=config['model'],
             critic_model=config['critic_model'],
             first_output=config['first_output'],
             workflow_output=config['workflow_output'],
+            model=LLMServerInfo(**config['model']),
+            critic_model=LLMServerInfo(**config['critic_model']),
         )
