@@ -158,11 +158,7 @@ class XMLPaperParser:
         except Exception as e:
             logging.warning(f" get {e}, fallback to parse paragraphs")
             self._fallback_parse_paragraphs(paper, body)
-    
-    # def _extract_text_from_element(self, element: ET.Element) -> str:
-    #     """从元素中提取文本内容"""
-    #     return ' '.join(element.itertext()).strip()
-    
+       
     def _extract_text_from_element(self, element: ET.Element):
         current_text = []
         
@@ -349,7 +345,7 @@ class XMLPaperParser:
         has_section_index = (not self.current_section_hierarchy or self.current_section_hierarchy[-1].level >= 0)
         
         for child in div_element:
-            if child.tag.endswith("head"):
+            if child.tag == f"{{{self.NS['tei']}}}head":
                 text = self._extract_text_from_element(child)
                 n_attr = child.get('n')
                 numbers, title = self._parse_section_title_from_p(text, 'head', n_attr)
@@ -371,7 +367,7 @@ class XMLPaperParser:
                         if text:
                             current_section.paragraphs.append(text)
             
-            elif child.tag == f"{{{self.NS}}}p":
+            elif child.tag == f"{{{self.NS['tei']}}}p":
                 # 首先判断是否含有标题以及标题是否合法。self._compare_section_levels(numbers)
                 text = self._extract_text_from_element(child)
                 numbers, title = self._parse_section_title_from_p(text, 'p') if has_section_index else (None, None)
@@ -436,10 +432,10 @@ class XMLPaperParser:
 if __name__ == "__main__":
     from utils import skeleton_to_list
     parser = XMLPaperParser()
-    with open("/data/tsyu/1710.03675.xml", encoding='utf-8') as f:
+    with open("2105.07221v2.xml", encoding='utf-8') as f:
         paper = f.read()
     paper = parser.parse(paper)
     print(len(paper.children))
     print("=" * 50 + "Skeletion" + "=" * 50)
-    x = paper.get_skeleton("all")
-    print(skeleton_to_list(x)[0])
+    x, p = skeleton_to_list(paper.get_skeleton())
+    print(len(p), x)

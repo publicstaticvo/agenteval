@@ -1,7 +1,6 @@
-import re
 from __future__ import annotations
 from typing import List, Optional, Union
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -16,8 +15,8 @@ class Section:
     """Represents a section, subsection, subsubsection or abstract"""
     name: str
     father: Union[Section, Paper]
-    paragraphs: List[Paragraph] = []
-    children: List[Section] = []
+    paragraphs: List[Paragraph] = field(default_factory=list)
+    children: List[Section] = field(default_factory=list)
     
     def add_paragraph(self, child: Paragraph):
         self.paragraphs.append(child)
@@ -39,7 +38,7 @@ class Paper(Section):
     title: Optional[str] = None
     author: Optional[str] = None
     abstract: Optional[Section] = None  # Abstract should not have children
-    references: dict = {}  # Maps citation keys to bibliography entries
+    references: dict = field(default_factory=dict)  # Maps citation keys to bibliography entries
     has_section_index: bool = True
     
     def get_skeleton(self) -> List[Union[str, Paragraph]]:
