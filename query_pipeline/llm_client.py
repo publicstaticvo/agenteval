@@ -13,8 +13,8 @@ from session_manager import SessionManager
 
 
 def should_retry(exception: BaseException) -> bool:
-    if isinstance(exception, NotImplementedError): return False
     if isinstance(exception, KeyboardInterrupt): return False
+    if isinstance(exception, NotImplementedError): return False
     return True
 
 
@@ -28,11 +28,6 @@ class AsyncLLMClient(ABC):
         self.model = info.model
         self.timeout = timeout
 
-    @retry(
-        stop=stop_after_attempt(5),
-        wait=wait_exponential(multiplier=1.5, min=1, max=10),
-        retry=retry_if_exception(should_retry) | retry_if_result(lambda x: x is None)
-    )
     async def _post(self, session: aiohttp.ClientSession, payload: dict) -> dict:
         async with session.post(self.url, json=payload, headers=self.headers,
                                 timeout=aiohttp.ClientTimeout(total=self.timeout)) as resp:
@@ -41,15 +36,22 @@ class AsyncLLMClient(ABC):
         
     @abstractmethod
     def _availability(self, response):
-        pass
+        raise NotImplementedError
 
-    async def call(self, messages: list, temperature: float = 0.6, max_tokens: int = 1024) -> dict | None:
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=1.5, min=1, max=10),
+        retry=retry_if_exception(should_retry) | retry_if_result(lambda x: x is None)
+    )
+    async def call(self, messages: list, temperature: float = 0.6, max_tokens: int = 1024, **kwargs) -> dict | None:
         payload = {
             "model": self.model,
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens
         }
+
+        self._context = kwargs
         
         session = SessionManager.get()        
         try:

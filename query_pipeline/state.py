@@ -1,33 +1,33 @@
-from typing import List, Dict, Annotated, Any, NotRequired
+from typing import List, Dict, Annotated, Any
 from operator import add
-from typing_extensions import TypedDict
-from paper_elements import Paragraph
+from pydantic import BaseModel, Field
 
 
-class InputState(TypedDict):
-    query_id: int
-    query: str          # 另一种实现：query_list做输入，Send分发到search
+def append_reducer(left: List[Dict], right: List | Dict | None) -> List[Dict]:
+    if right is None:
+        return left
+    
+    if isinstance(right, dict): 
+        left.append(right)
+        return left
+
+    if isinstance(right, list): 
+        return left + right
+
+    return left
 
 
-class AgentState(TypedDict):
-    query_id: int
+class GeneratePayload(BaseModel):
     query: str
-    retrieved_papers: List[Dict[str, Any]]
-
-
-class GeneratePayload(TypedDict):
-    query: str
     query_id: int
-    paper_id: int
     paper: Dict[str, Any]
 
 
-class GenerateState(TypedDict):
+class GenerateState(BaseModel):
     query: str
     query_id: int
-    paper_id: int
     paper: Dict[str, Any]
-    sections: NotRequired[str]
-    generated: NotRequired[str]
-    tools_used: NotRequired[List]
-    results: Annotated[List[Dict], add]
+    sections: str = ""
+    generated: str = ""
+    tools_used: List = Field(default_factory=list)
+    results: Annotated[List[Dict], append_reducer]

@@ -118,16 +118,22 @@ def get_metadata(paper: dict):
 
 
 def yield_location(x):
-    yield x["best_oa_location"]['pdf_url']
-    for y in x['locations']:
+    urls = set()
+    y = x["best_oa_location"]
+    if y and y['pdf_url']: 
+        urls.add(y['pdf_url'])
         yield y['pdf_url']
+    for y in x['locations']:
+        if y['pdf_url'] and y['pdf_url'] not in urls: 
+            urls.add(y['pdf_url'])
+            yield y['pdf_url']
 
 
 def skeleton_to_list(paper: list[str | Paragraph]) -> tuple[str, list[str]]:
     repr_str, paragraphs = [], []
     p_count = 0
     for p in paper:
-        if isinstance(p, str):  # 标题
+        if isinstance(p, str):  # 章节标题
             repr_str.append(p)
         else:
             p_count += 1

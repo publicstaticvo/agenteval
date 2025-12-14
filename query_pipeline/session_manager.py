@@ -36,7 +36,7 @@ class RateLimit:
     SEARCH_SEMAPHORE = asyncio.Semaphore(10)                # 搜索 API
     SELECT_GENERATE_SEMAPHORE = asyncio.Semaphore(50)       # LLM
     CRITIC_SEMAPHORE = asyncio.Semaphore(50)                # LLM
-    PARSE_SEMAPHORE = asyncio.Semaphore(50)                 # GROBID docker镜像本地解析
+    PARSE_SEMAPHORE = asyncio.Semaphore(30)                 # GROBID docker镜像本地解析
 
 
 class SessionManager:
@@ -70,8 +70,7 @@ class SessionManager:
 # api_utils.py
 def should_retry(exception: BaseException) -> bool:
     if any(isinstance(exception, x) for x in RETRY_EXCEPTION_TYPES): return True
-    if isinstance(exception, aiohttp.ClientResponseError) and \
-        exception.status not in [400, 401, 403, 404]: return True
+    if isinstance(exception, aiohttp.ClientResponseError) and exception.status not in [400, 401, 403, 404]: return True
     return False
 
 @retry(

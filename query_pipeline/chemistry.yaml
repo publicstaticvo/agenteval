@@ -1,7 +1,0 @@
-input_file: chem.json
-tool_file: chemistry_domain_tool_info.json
-n_queries: 4
-model: gpt-oss-120b
-critic_model: qwen3:235b
-first_output: queries/chemistry_first.json
-workflow_output: queries/chemistry_workflow.jsonl

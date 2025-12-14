@@ -5,6 +5,7 @@
 *.log
 *.json
 *.jsonl
+*.yaml
 *.tar.gz
 .idea
 .ipynb_checkpoints

@@ -279,6 +279,7 @@ Output: hallucination detection large language models
 Input:  Deep Learning for Computer Vision: A Survey
 Output: deep learning computer vision
 
+Your turn:
 Input:  {x['query']}  
 Output: """
     return [{'role': 'user', 'content': prompt}]
