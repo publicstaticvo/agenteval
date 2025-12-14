@@ -74,7 +74,7 @@ async def searchnode(query_id: int, query: str):
     
     # 1. 调用异步搜索 OpenAlex
     async with RateLimit.SEARCH_SEMAPHORE:            # 并发量10-20
-        search_result = await openalex_search_paper("works", filter={"default.search": query}, per_page=25)
+        search_result = await openalex_search_paper("works", filter={"default.search": query}, per_page=200)
     search_result = search_result.get("results", [])
     print(f"Search papers for {query}, get {len(search_result)} results")
         

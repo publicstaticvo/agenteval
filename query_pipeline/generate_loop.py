@@ -36,10 +36,16 @@ class SelectNode:
                 {"role": "system", "content": SELECT_SYSTEM},
                 {"role": "user", "content": user_message},
             ]
-            target = await self.client.call(messages, 0, num_paragraphs=len(paragraphs))
-            if target is None:
-                return {"sections": ""}
-            return {"sections": "\n\n".join(paragraphs[i - 1] for i in target)}
+            try:
+                target = await self.client.call(messages, 0, num_paragraphs=len(paragraphs))
+                if target is None:
+                    return {"sections": ""}
+                return {"sections": "\n\n".join(paragraphs[i - 1] for i in target)}
+            except KeyboardInterrupt:
+                raise
+            except Exception as e:
+                if isinstance(e, RetryError): print(f"SelectNode {e.last_attempt.result()}")
+                else: print(f"SelectNode {e}")
 
 
 class AsyncGenerateClient(AsyncLLMClient):
