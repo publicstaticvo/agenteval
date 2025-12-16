@@ -113,12 +113,11 @@ Task: Select 2 kind of paragraphs to form the context.
    - Look for paragraphs in sections with these keywords: "Computational Details", "Methodology", "Simulation Setup", "Docking Protocol".
    - IGNORE paragraphs in sections like "Wet Lab", "Synthesis", or "Biological Assays" (our agent is purely computational).
    - IGNORE paragraphs in "Results" and "Discussion" (these contain outcomes we want the agent to *discover*, not read).
-Remember to choose no more than 2 paragraphs for each kind. Our context is limited.
 
 Output Format: JSON with keys "goal_paragraph_indexes" and "recipe_paragraph_indexes", each with a list of paragraph indexes:
 ```
 {{
-   "goal_paragraph_indexes": [3],
+   "goal_paragraph_indexes": [2],
    "recipe_paragraph_indexes": [6, 7]
 }}
 ```

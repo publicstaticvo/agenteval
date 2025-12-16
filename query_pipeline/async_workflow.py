@@ -24,7 +24,6 @@ def stop_condition(state: GenerateState):
     if (score >= 95 and len(state.tools_used) >= 3) or len(state.results) >= 10:        
         print(f"The score for query {state.query} paper {state.paper['title']} is {score}, can output now.")
         return "save"  
-    print(f"The score for query {state.query} paper {state.paper['title']} is {score}, cannot output now.")
     return "generate"
 
 
@@ -86,12 +85,11 @@ async def searchnode(query_id: int, query: str):
             paper_data = await process_paper(session, paper_meta)  # title, abstract, url, skeleton
             if paper_data:
                 print(f"Paper {paper_data['title']} ready. Ainvoke a generate loop.")
-                await app.ainvoke({"query_id": query_id, "query": query, "paper": paper_data})
+                await app.ainvoke({"query_id": query_id, "query": query, "paper_id": i, "paper": paper_data})
                 print(f"Paper {paper_data['title']} loop concludes.")
                 return True
         except Exception as e:
             print(f"Metadata {i} of query id {query_id} query {query} fails an {e}")
-            raise
         return False
 
     tasks = []

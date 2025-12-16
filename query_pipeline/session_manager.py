@@ -34,9 +34,9 @@ RETRY_EXCEPTION_TYPES = [
 
 class RateLimit:
     SEARCH_SEMAPHORE = asyncio.Semaphore(10)                # 搜索 API
-    SELECT_GENERATE_SEMAPHORE = asyncio.Semaphore(50)       # LLM
-    CRITIC_SEMAPHORE = asyncio.Semaphore(50)                # LLM
-    PARSE_SEMAPHORE = asyncio.Semaphore(30)                 # GROBID docker镜像本地解析
+    SELECT_GENERATE_SEMAPHORE = asyncio.Semaphore(75)       # LLM
+    CRITIC_SEMAPHORE = asyncio.Semaphore(75)                # LLM
+    PARSE_SEMAPHORE = asyncio.Semaphore(50)                 # GROBID docker镜像本地解析
 
 
 class SessionManager:
@@ -46,7 +46,7 @@ class SessionManager:
     async def init(cls):
         """进入上下文时调用"""
         if cls._global_session is None:
-            connector = aiohttp.TCPConnector(limit=200, limit_per_host=100, ttl_dns_cache=300)
+            connector = aiohttp.TCPConnector(limit=250, limit_per_host=100, ttl_dns_cache=300)
             cls._global_session = aiohttp.ClientSession(
                 connector=connector,
                 timeout=aiohttp.ClientTimeout(total=60)

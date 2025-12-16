@@ -26,7 +26,7 @@ class SelectNode:
         self.client = AsyncSelectClient(llm)
 
     async def __call__(self, state: GenerateState) -> Dict[str, List[Dict[str, Any]]]:
-        print(f"Select paper range for query {state.query} paper {state.paper['title']}")
+        print(f"Select paper range for query {state.query_id} paper id {state.paper_id} title {state.paper['title']}")
 
         async with RateLimit.SELECT_GENERATE_SEMAPHORE:
             paper = state.paper
@@ -61,9 +61,8 @@ class GenerateNode:
         self.tools = tools_desc
 
     async def __call__(self, state: GenerateState) -> dict | None:
-        """生成工具感知的优化查询 - 必须使用 3 个工具"""
-        print(f"Generate query round {len(state.results) + 1} for query {state.query} paper {state.paper['title']}")
-        
+        """生成工具感知的优化查询 - 必须使用 3 个工具"""        
+        print(f"Generate query round {len(state.results) + 1} for query {state.query_id} paper {state.paper_id}")
         async with RateLimit.SELECT_GENERATE_SEMAPHORE:
             if state.results:
                 messages = [
@@ -74,16 +73,15 @@ class GenerateNode:
                         query=state.results[-1]['optimized'], 
                         critic=json.dumps(state.results[-1]['critic'], ensure_ascii=False, indent=2)
                     )}
-                ]  
+                ]                
             else:
                 messages = [
                     {"role": "system", "content": GENERATE_SYSTEM},
                     {"role": "user", "content": GENERATE_USER.format(tools=self.tools, text=state.sections)}
-                ]                               
+                ]  
             # 一步到位
             try:
                 generated, tools_used = await self.client.call(messages, 0.8, 4096)
-                print(f"query {state.query_id} iteration {len(state.results) + 1}")
                 return {"generated": generated, "tools_used": tools_used}
             except KeyboardInterrupt:
                 raise
@@ -112,7 +110,7 @@ class CriticNode:
         generated = state.generated
         if not generated: return
 
-        print(f"Critique round {len(state.results) + 1} for query {state.query} paper {state.paper['title']}")
+        print(f"Critique round {len(state.results) + 1} for query {state.query_id} paper {state.paper_id}")
         
         async with RateLimit.CRITIC_SEMAPHORE:
             user = CRITIC_USER.format(
@@ -120,7 +118,7 @@ class CriticNode:
                 query=generated, 
                 num_tools=len(tools_used),
                 tools_used=', '.join(tools_used) if tools_used else 'No'
-            )    
+            )      
             messages = [
                 {"role": "system", "content": CRITIC_SYSTEM},
                 {"role": "user", "content": user}
@@ -128,12 +126,12 @@ class CriticNode:
             try:
                 critic = await self.client.call(messages, 0, 4096)
                 print(f"critic {state.query_id} iteration {len(state.results) + 1}")
-                return {"results": {
+                return {"results": [{
                     "optimized": generated,
                     "score": critic['total_score'],
                     "tools_used": tools_used,
                     "critic": critic,
-                }}
+                }]}
             except KeyboardInterrupt:
                 raise
             except Exception as e:

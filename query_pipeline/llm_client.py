@@ -44,20 +44,14 @@ class AsyncLLMClient(ABC):
         retry=retry_if_exception(should_retry) | retry_if_result(lambda x: x is None)
     )
     async def call(self, messages: list, temperature: float = 0.6, max_tokens: int = 1024, **kwargs) -> dict | None:
+        self._context = kwargs  
         payload = {
             "model": self.model,
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens
-        }
-
-        self._context = kwargs
-        
+        }      
         session = SessionManager.get()        
-        try:
-            data = await self._post(session, payload)
-            content = data["choices"][0]["message"]["content"]
-            return self._availability(content)
-        except Exception as e:
-            # tenacity 会自动重试
-            raise e
+        data = await self._post(session, payload)
+        content = data["choices"][0]["message"]["content"]
+        return self._availability(content)

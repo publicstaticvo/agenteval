@@ -19,7 +19,6 @@ class Config:
     input_file: str = "chem.txt"
     tool_file: str = "tools.json"
     n_queries: int = 5
-    critic_model: str = "whatever"
     workflow_output: str = "workflow.json"
     model: LLMServerInfo = field(default_factory=LLMServerInfo)
     critic_model: LLMServerInfo = field(default_factory=LLMServerInfo)
