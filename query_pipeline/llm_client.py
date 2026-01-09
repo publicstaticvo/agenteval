@@ -8,8 +8,7 @@ from tenacity import (
 )
 from abc import ABC, abstractmethod
 from config import LLMServerInfo
-from utils import extract_json
-from session_manager import SessionManager
+from session_manager import SessionManager, RateLimit
 
 
 def should_retry(exception: BaseException) -> bool:
@@ -19,6 +18,9 @@ def should_retry(exception: BaseException) -> bool:
 
 
 class AsyncLLMClient(ABC):
+
+    PROMPT: str = ""
+
     def __init__(self, info: LLMServerInfo, timeout: int = 600):
         self.url = f"{info.base_url.rstrip('/')}/v1/chat/completions"
         self.headers = {
@@ -28,30 +30,31 @@ class AsyncLLMClient(ABC):
         self.model = info.model
         self.timeout = timeout
 
-    async def _post(self, session: aiohttp.ClientSession, payload: dict) -> dict:
-        async with session.post(self.url, json=payload, headers=self.headers,
-                                timeout=aiohttp.ClientTimeout(total=self.timeout)) as resp:
-            resp.raise_for_status()
-            return await resp.json()
-        
-    @abstractmethod
-    def _availability(self, response):
-        raise NotImplementedError
-
     @retry(
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=1.5, min=1, max=10),
         retry=retry_if_exception(should_retry) | retry_if_result(lambda x: x is None)
     )
-    async def call(self, messages: list, temperature: float = 0.6, max_tokens: int = 1024, **kwargs) -> dict | None:
-        self._context = kwargs  
-        payload = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens
-        }      
-        session = SessionManager.get()        
-        data = await self._post(session, payload)
+    async def _post(self, payload: dict) -> dict:
+        async with RateLimit.LLM_SEMAPHORE:
+            async with SessionManager.get().post(self.url, json=payload, headers=self.headers,
+                                                 timeout=aiohttp.ClientTimeout(total=self.timeout)) as resp:
+                resp.raise_for_status()
+                data = await resp.json()
         content = data["choices"][0]["message"]["content"]
         return self._availability(content)
+        
+    @abstractmethod
+    def _availability(self, response):
+        raise NotImplementedError
+    
+    def _organize_inputs(self, inputs: dict):
+        return [{"role": "user", "content": self.PROMPT.format(**inputs)}]
+
+    async def call(self, messages: list = [], inputs: dict = {}, context: dict = {}, **kwargs) -> dict | None:
+        self._context = context
+        if not messages:
+            messages = self._organize_inputs(inputs)
+        payload = {"model": self.model, "messages": messages, "temperature": 0.0, "max_tokens": 4096} | kwargs
+        return await self._post(payload)
+        

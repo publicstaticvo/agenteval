@@ -1,13 +1,17 @@
 import json
 import asyncio, aiofiles
-from langgraph.graph import StateGraph, START, END
+from langgraph.types import Send
+from langgraph.graph import StateGraph
+from typing import Dict, List, Any, Optional
 
 from config import Config
 from search import process_paper
+from intro_select import SelectNode
 from state import GenerateState, GeneratePayload
-from generate_loop import GenerateNode, CriticNode, SelectNode
-from utils import extract_queries, load_tools, format_tools_context
-from session_manager import openalex_search_paper, SessionManager, RateLimit
+from generate_loop import GenerateNode, CriticNode
+from session_manager import openalex_search_paper, SessionManager
+from hybrid_select import HybridSelectStep1, HybridSelectStep2, HybridSelectStep3
+from utils import extract_queries, load_tools, format_tools_context, skeleton_to_list, skeleton_to_dict
 
 config = Config.from_yaml("config.yaml")
 queries = extract_queries(config.input_file)
@@ -28,7 +32,7 @@ def stop_condition(state: GenerateState):
 
 
 async def save_node(state: GenerateState):
-    if not state.sections: return
+    if not state.artifacts: return
     async with _file_lock:
         async with aiofiles.open(config.workflow_output, "a+", encoding="utf-8") as f:
             content = json.dumps({
@@ -47,17 +51,14 @@ async def save_node(state: GenerateState):
 
 def build_workflow():
     # init
-    select_node = SelectNode(config.model)
     generate_node = GenerateNode(config.model, tools_desc)
     critic_node = CriticNode(config.critic_model, tools_desc)
 
     workflow = StateGraph(GenerateState, input_schema=GeneratePayload)
-    workflow.add_node("select", select_node)
     workflow.add_node("generate", generate_node)
     workflow.add_node("critic", critic_node)
     workflow.add_node("save", save_node)
-    workflow.set_entry_point("select")
-    workflow.add_conditional_edges("select", lambda state: ("generate" if state.sections else "save"))
+    workflow.set_entry_point("generate")
     workflow.add_edge("generate", "critic")
     workflow.add_conditional_edges("critic", stop_condition)
     workflow.set_finish_point("save")
@@ -65,6 +66,45 @@ def build_workflow():
 
 
 app = build_workflow()
+step1 = HybridSelectStep1(config.model)
+step2 = HybridSelectStep2(config.model)
+step3 = HybridSelectStep3(config.model)
+
+
+async def selectnode(query_id, query, paper_id, paper) -> Dict[str, List[Dict[str, Any]]]:
+    print(f"Select paper range for query {query_id} paper id {paper_id} title {paper['title']}")
+    content, paragraphs = skeleton_to_list(paper['structure'], "full")
+    try:
+        candidates = await step1.call(inputs={'content': content}, context={'paragraphs': paragraphs})
+    except Exception as e:
+        print(f"Step 1 {e}")
+    tasks = [asyncio.create_task(step2.call(inputs=c)) for c in candidates]
+    reproducible = []
+    for task in asyncio.as_completed(tasks):            
+        try:
+            result = await task
+            if result: reproducible.append(result)
+        except Exception as e:
+            print(f"Step 2 {e}")
+    content = skeleton_to_dict(paper['structure'])
+    tasks = [asyncio.create_task(step3.call(inputs={'sentence': c, 'paper': content})) for c in reproducible]
+    result_and_method = []
+    for task in asyncio.as_completed(tasks):            
+        try:
+            result = await task
+            if result: result_and_method.append(result)
+        except Exception as e:
+            print(f"Step 3 {e}")
+    # TODO: filter
+    for i, result in enumerate(result_and_method):
+        print(f"Start generate!")
+        await app.ainvoke({
+            "query_id": query_id, 
+            "query": query, 
+            "paper_id": paper_id,
+            "paper": paper['title'],
+            "artifact": result
+        })
 
 
 async def searchnode(query_id: int, query: str):
@@ -72,8 +112,7 @@ async def searchnode(query_id: int, query: str):
     print(f"Searching papers for {query} ...")
     
     # 1. 调用异步搜索 OpenAlex
-    async with RateLimit.SEARCH_SEMAPHORE:            # 并发量10-20
-        search_result = await openalex_search_paper("works", filter={"default.search": query}, per_page=200)
+    search_result = await openalex_search_paper("works", filter={"default.search": query}, per_page=200)
     search_result = search_result.get("results", [])
     print(f"Search papers for {query}, get {len(search_result)} results")
         
@@ -84,8 +123,8 @@ async def searchnode(query_id: int, query: str):
         try:
             paper_data = await process_paper(session, paper_meta)  # title, abstract, url, skeleton
             if paper_data:
-                print(f"Paper {paper_data['title']} ready. Ainvoke a generate loop.")
-                await app.ainvoke({"query_id": query_id, "query": query, "paper_id": i, "paper": paper_data})
+                print(f"Paper {paper_data['title']} ready. Ainvoke a search loop.")
+                await selectnode(query_id, query, i, paper_data)              
                 print(f"Paper {paper_data['title']} loop concludes.")
                 return True
         except Exception as e:

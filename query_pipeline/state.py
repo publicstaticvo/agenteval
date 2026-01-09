@@ -3,33 +3,20 @@ from operator import add
 from pydantic import BaseModel, Field
 
 
-# def append_reducer(left: List[Dict], right: List | Dict | None) -> List[Dict]:
-#     if right is None:
-#         return left
-    
-#     if isinstance(right, dict): 
-#         left.append(right)
-#         return left
-
-#     if isinstance(right, list): 
-#         return left + right
-
-#     return left
-
-
 class GeneratePayload(BaseModel):
     query: str
     query_id: int
     paper_id: int
-    paper: Dict[str, Any]
+    paper: str
+    artifact: Dict[str, Any]
 
 
 class GenerateState(BaseModel):
     query: str
     query_id: int
     paper_id: int
-    paper: Dict[str, Any]
-    sections: str = ""
+    paper: str
+    artifact: Dict[str, Any]
     generated: str = ""
     tools_used: List = Field(default_factory=list)
     results: Annotated[List[Dict], add]

@@ -25,7 +25,7 @@ class Section:
         self.children.append(child)
         
     def get_skeleton(self, section_id: str):
-        repr_str = [f"\nSection {section_id} {self.name}\n\n"] + self.paragraphs
+        repr_str = [f"\nSection {section_id} {self.name}\n"] + self.paragraphs
         for i, s in enumerate(self.children):
             repr_str.extend(s.get_skeleton(f"{section_id}{i + 1}."))
         return repr_str
@@ -37,8 +37,8 @@ class Paper(Section):
     link: Optional[str] = None
     title: Optional[str] = None
     author: Optional[str] = None
-    abstract: Optional[Section] = None  # Abstract should not have children
-    references: dict = field(default_factory=dict)  # Maps citation keys to bibliography entries
+    abstract: Optional[Section] = None
+    references: dict = field(default_factory=dict)
     has_section_index: bool = True
     
     def get_skeleton(self) -> List[Union[str, Paragraph]]:
