@@ -124,10 +124,10 @@ Task: Select 2 kind of paragraphs to form the context.
 
 Output Format: JSON with keys "goal_paragraph_indexes" and "recipe_paragraph_indexes", each with a list of paragraph indexes:
 ```
-{{
+{
    "goal_paragraph_indexes": [2],
    "recipe_paragraph_indexes": [6, 7]
-}}
+}
 ```
 """
 
@@ -162,14 +162,14 @@ Instructions:
 Output:
 Return a JSON object with the following structure:
 ```json
-{{
+{
   "candidates": [
-    {{
+    {
       "paragraph_index": paragraph index (an integer),
       "sentence_text": "<verbatim sentence>"
-    }}
+    }
   ]
-}}
+}
 ```
 """
 
@@ -197,11 +197,11 @@ Output:
 Return a JSON object with the following structure:
 
 ```json
-{{
+{
   "reproducible": true | false,
   "reason": "<brief explanation (1–2 sentences)>",
   "supporting_sentences": ["Sentence 1", "Sentence 2", ...]
-}}
+}
 ```
 
 Additional rules:
@@ -215,7 +215,7 @@ HYBRID_SELECT_STEP_2_USER = """[Candidate sentence]
 {text}
 
 [Evidence pool]
-{evidence}
+{evidences}
 """
 
 HYBRID_SELECT_STEP_3 = """You are a Scientific Data Engineer. You are given:
@@ -234,11 +234,11 @@ Important rules:
 Output:
 Return a JSON object with the following structure:
 
-{{
+{
   "method_sentences": ["Sentence 1.", "Sentence 2.", "Sentence 3."],
   "method_type": "wet" | "dry" | "hybrid" | "uncertain",
   "selection_reason": "<brief explanation of why these method sentences are relevant>"
-}}
+}
 
 Definitions of `method_type` classes:
 - "wet": The result requires physical laboratory work (e.g., synthesis, biological assays, chemical reactions, material fabrication, in-vitro or in-vivo experiments).
@@ -253,5 +253,5 @@ HYBRID_SELECT_STEP_3_USER = """[Reproducible experimental result]
 {text}
 
 [Paper structures]
-{evidence}
+{paper}
 """

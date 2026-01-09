@@ -14,7 +14,7 @@ from pdf_parser import XMLPaperParser
 from utils import yield_location
 
 
-GROBID_URL = "http://localhost:8070"
+GROBID_URL = "http://172.18.36.90:8070"
 parser = XMLPaperParser()
 
 
@@ -31,6 +31,7 @@ async def process_paper(session: aiohttp.ClientSession, paper_meta: dict) -> Opt
     
     # 为该论文的所有 URL 创建任务
     tasks = [asyncio.create_task(try_one_url(session, url)) for url in list(yield_location(paper_meta))]
+    print(f"location numbers: {len(tasks)}")
     
     # 使用 as_completed 获取第一个成功的结果
     try:
@@ -93,7 +94,7 @@ async def try_one_url(session: aiohttp.ClientSession, url: str) -> Optional[dict
     wait=wait_exponential(multiplier=1, min=2, max=10),
     retry=retry_if_result(lambda x: x is None)
 )
-async def download_pdf(session: aiohttp.ClientSession, url: str, timeout: int = 600):
+async def download_pdf(session: aiohttp.ClientSession, url: str, timeout: int = 60):
     """下载 PDF 文件"""
     try:
         async with session.get(url, timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
@@ -103,7 +104,7 @@ async def download_pdf(session: aiohttp.ClientSession, url: str, timeout: int = 
     except KeyboardInterrupt:
         raise
     except Exception as e:
-        # print(f"Download failed {url}: {e}")
+        print(f"Download failed {url}: {e}")
         return None
 
 
@@ -134,12 +135,11 @@ async def parse_with_grobid(session: aiohttp.ClientSession, pdf_buffer: io.Bytes
     except KeyboardInterrupt:
         raise
     except asyncio.TimeoutError:
-        # print("GROBID timeout, will retry")
-        raise  # 让 tenacity 处理重试
+        print("GROBID timeout, will retry")
+        raise
     except aiohttp.ClientError as e:
-        # print(f"GROBID client error: {e}, will retry")
+        print(f"GROBID client error: {e}, will retry")
         raise
     except Exception as e:
-        # 其他错误不重试，直接返回 None
         print(f"GROBID unexpected error: {e}")
         return None

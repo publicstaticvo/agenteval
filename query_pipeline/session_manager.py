@@ -30,6 +30,7 @@ RETRY_EXCEPTION_TYPES = [
     aiohttp.ServerDisconnectedError, 
     json.JSONDecodeError
 ]
+OPENALEX_SELECT = 'id,title,best_oa_location,locations'
 
 
 class RateLimit:
@@ -108,7 +109,7 @@ async def async_request_template(
 async def openalex_search_paper(
         endpoint: str,
         filter: dict = None,
-        do_sample: bool = True,
+        do_sample: bool = False,
         per_page: int = 1,
         add_email: bool | str = True,
         **request_kwargs
@@ -129,6 +130,7 @@ async def openalex_search_paper(
         request_kwargs['mailto'] = add_email if isinstance(add_email, str) else random.choice(email_pool)
     if per_page > 25: 
         request_kwargs['per-page'] = per_page
+    request_kwargs['select'] = OPENALEX_SELECT
     # Go!
     async with RateLimit.SEARCH_SEMAPHORE:
         return await async_request_template("get", url, None, request_kwargs)

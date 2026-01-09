@@ -129,7 +129,7 @@ def yield_location(x):
             yield y['pdf_url']
 
 
-def skeleton_to_list(paper: list[str | Paragraph], mode: str = "first") -> tuple[str, list[str]]:
+def skeleton_to_list(paper: list[str | dict], mode: str = "first") -> tuple[str, list[str]]:
     repr_str, paragraphs = [], []
     p_count = 0
     for p in paper:
@@ -137,21 +137,23 @@ def skeleton_to_list(paper: list[str | Paragraph], mode: str = "first") -> tuple
             repr_str.append(p)
         else:
             p_count += 1
-            p.text = re.sub(r"\s+", " ", p.text)
-            sentence = re.split(r'(?<=[.!?])\s+', p.text, 1)[0] if mode == "first" else p.text
-            repr_str.append(f"Paragraph {p_count}: {sentence} ...\n")
-            paragraphs.append(p.text)
+            p['text'] = re.sub(r"\s+", " ", p['text'])
+            if mode == "first":
+                repr_str.append(f"Paragraph {p_count}: {re.split(r'(?<=[.!?])\s+', p['text'], 1)[0]} ...\n")
+            else:
+                repr_str.append(f"Paragraph {p_count}: {p['text']}\n")
+            paragraphs.append(p['text'])
     context = '\n'.join(repr_str)
     return context, paragraphs
 
 
-def skeleton_to_dict(paper: list[str | Paragraph]) -> str:
+def skeleton_to_dict(paper: list[str | dict]) -> str:
     repr_dict = []
     for p in paper:
         if isinstance(p, str):  # 章节标题
             repr_dict.append({"section_name": p, "paragraphs": []})
         else:
-            repr_dict[-1]['paragraphs'].append(re.sub(r"\s+", " ", p.text))
+            repr_dict[-1]['paragraphs'].append(re.sub(r"\s+", " ", p['text']))
     return json.dumps(repr_dict, ensure_ascii=False, indent=2)
 
 

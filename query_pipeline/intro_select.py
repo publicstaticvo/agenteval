@@ -9,8 +9,8 @@ from utils import skeleton_to_list, extract_json
 
 
 class AsyncSelectClient(AsyncLLMClient):
-    def _availability(self, response: str):
-        num_paragraphs = self._context.get("num_paragraphs", 0)
+    def _availability(self, response: str, context: dict):
+        num_paragraphs = context.get("num_paragraphs", 0)
         if num_paragraphs <= 0:
             raise ValueError("You should pass num_paragraphs to Select LLM Client")
         response = extract_json(response)

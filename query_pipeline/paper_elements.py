@@ -25,7 +25,7 @@ class Section:
         self.children.append(child)
         
     def get_skeleton(self, section_id: str):
-        repr_str = [f"\nSection {section_id} {self.name}\n"] + self.paragraphs
+        repr_str = [f"\nSection {section_id} {self.name}\n"] + [{"text": p.text} for p in self.paragraphs] 
         for i, s in enumerate(self.children):
             repr_str.extend(s.get_skeleton(f"{section_id}{i + 1}."))
         return repr_str
@@ -42,7 +42,7 @@ class Paper(Section):
     has_section_index: bool = True
     
     def get_skeleton(self) -> List[Union[str, Paragraph]]:
-        repr_str = self.paragraphs  
+        repr_str = [{"text": p.text} for p in self.paragraphs]  
         for i, section in enumerate(self.children):
             repr_str.extend(section.get_skeleton(f"{i + 1}."))
         return repr_str

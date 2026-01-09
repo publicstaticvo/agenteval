@@ -10,7 +10,7 @@ from utils import extract_json
 
 
 class AsyncGenerateClient(AsyncLLMClient):
-    def _availability(self, response: str):
+    def _availability(self, response: str, context: dict):
         response = extract_json(response)
         return response['new_research_query'], response['required_tools']
 
@@ -52,7 +52,7 @@ class GenerateNode:
 
 
 class AsyncCriticClient(AsyncLLMClient):
-    def _availability(self, response: str):
+    def _availability(self, response: str, context: dict):
         response_dict = extract_json(response)
         score = response_dict['total_score']
         if isinstance(score, str) and score.isdigit():
