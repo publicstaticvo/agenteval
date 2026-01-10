@@ -78,6 +78,8 @@ class CriticNode:
         print(f"Critique round {len(state.results) + 1} for query {state.query_id} paper {state.paper_id}")
         user = CRITIC_USER.format(
             tools=self.tools, 
+            result=state.artifact['result'],
+            method=state.artifact['method'],
             query=generated, 
             num_tools=len(tools_used),
             tools_used=', '.join(tools_used) if tools_used else 'No'
