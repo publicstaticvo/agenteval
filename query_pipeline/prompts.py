@@ -30,65 +30,97 @@ Return in strict JSON format (JSON only, no other text):
   "evaluation_metrics": ["Metric 1", "Metric 2"]
 }}"""
 
-CRITIC_SYSTEM = """You are a rigorous academic reviewer and evaluator.
-🔴 [CRITICAL] The query must explicitly utilize at least 3 different tools. If fewer than 3 tools are used, points will be significantly deducted.
-Tool utilization is the core evaluation dimension with the highest weight (0-35 points)."""
+CRITIC_SYSTEM = """You are a rigorous academic reviewer and evaluator specializing in scientific reasoning assessment.
+
+🔴 [CRITICAL REQUIREMENTS]
+- The research query must explicitly utilize exactly 3 different tools. If fewer or more than 3 tools are used, points must be significantly deducted.
+- The proposed research task must remain scientifically consistent with the provided reproducible results.
+- Any research objective, evaluation metric, or expected outcome that contradicts the given results should be treated as a major flaw.
+
+Tool utilization and result consistency are the two highest-weight evaluation dimensions.
+"""
 
 CRITIC_USER = """
 [AVAILABLE TOOLS]
 {tools}
 
-[RESEARCH QUESTION UNDER EVALUATION]
+[REPRODUCIBLE RESULTS]
+{result}
+
+[METHODS]
+{method}
+
+[RESEARCH TASK UNDER EVALUATION]
 {query}
 
 [TOOL USAGE INFORMATION]
 Number of tools declared: {num_tools}
 Specific tools: {tools_used}
 
-Please conduct a rigorous evaluation based on the following four dimensions (Total: 100 points):
+Please conduct a rigorous evaluation based on the following five dimensions (Total: 100 points):
 
-1. **Academic Rigor (0-25 points)**:
-   - Is the research query clearly defined and specific? Does it include quantifiable indicators?
-   - Does it follow scientific methodology (hypothesis, methods, validation)?
-   - Is terminology used accurately and appropriately?
+1. **Academic Rigor (0-20 points)**:
+   - Is the research query clearly defined and scientifically precise?
+   - Does it follow a valid scientific reasoning structure (objective → method → validation)?
+   - Is terminology accurate and appropriate?
 
-2. **Comprehensive Tool Utilization (0-35 points)** 🔴 [CORE DIMENSION]:
-   - Base score of 20 points: Must use 3 available tools
-   - Additional 15 points: Based on quality of tool usage
-   - Are the specific purposes of all 3 tools clearly articulated?
-   - Do the tools form an organic research pipeline?
+2. **Comprehensive Tool Utilization (0-30 points)** 🔴 [CORE DIMENSION]:
+   - Base score of 20 points: Exactly 3 tools are used.
+   - Additional 10 points: Quality and coherence of tool orchestration.
+   - Are the roles of all 3 tools clearly specified and logically connected?
 
-3. **Feasibility (0-30 points)**:
-   - Is the research query concrete and actionable? Does it include clear steps or workflow?
-   - Are the usage steps for all 3 tools clear and practical?
-   - Are the expected outcomes clearly measurable?
+3. **Result Consistency and Faithfulness (0-25 points)** 🔴 [NEW CORE DIMENSION]:
+   - Are the research objectives logically compatible with the provided reproducible results?
+   - Could the proposed workflow plausibly reproduce, verify, or extend the given results?
+   - Does the query avoid introducing unverifiable or contradictory claims?
 
-4. **Scientific Innovation and Practical Value (0-10 points)**:
-   - Does the research query have academic merit?
-   - Do the results have real-world application potential?
+4. **Feasibility (0-15 points)**:
+   - Is the research task concrete and executable?
+   - Are the steps sufficiently detailed to be followed in practice?
+   - Are evaluation metrics measurable?
 
-Return in JSON format (JSON only):
+5. **Scientific Innovation and Practical Value (0-10 points)**:
+   - Does the task go beyond trivial restatement of the results?
+   - Does it meaningfully extend, analyze, or generalize the findings?
+
+Return in strict JSON format (JSON only):
 {{
   "total_score": <integer from 0-100>,
   "dimension_scores": {{
-    "academic_rigor": <0-25>,
-    "comprehensive_tool_utilization": <0-35>,
-    "feasibility": <0-30>,
+    "academic_rigor": <0-20>,
+    "comprehensive_tool_utilization": <0-30>,
+    "result_consistency_and_faithfulness": <0-25>,
+    "feasibility": <0-15>,
     "scientific_innovation_and_practical_value": <0-10>
   }},
   "detailed_evaluation": "2-3 sentences of detailed analysis",
-  "improvement_suggestions": "Specific recommendations for improvement"
-}}"""
+  "improvement_suggestions": "Concrete and actionable recommendations for improvement"
+}}
+"""
 
-REVISE_SYSTEM = """You are an experienced AI research assistant and research task optimization expert. Your responsibility is to receive an existing research query with its proposal, modification suggestions, and the original paper context, then output an improved, more compliant new proposal.
-🔴 [CORE REQUIREMENT] Your optimized proposal must still adhere to the principle of "using at least 3 different tools" and ensure all modifications closely align with both the paper excerpt and the improvement suggestions."""
+REVISE_SYSTEM = """You are an experienced AI research assistant and research task optimization expert.
+
+Your responsibility is to revise an existing research task proposal based on:
+(1) explicitly provided reproducible results and their corresponding methods,
+(2) received critique and improvement suggestions,
+while strictly preserving scientific consistency with the original reproducible results.
+
+🔴 [CORE REQUIREMENTS]
+- The revised research task must remain faithful to the given reproducible results and methods.
+- You must NOT introduce objectives, hypotheses, or evaluation targets that contradict the provided results.
+- The revised proposal must still employ exactly 3 different tools in a coherent and executable research pipeline.
+- All revisions must directly respond to the received improvement suggestions.
+"""
 
 REVISE_USER = """
 [AVAILABLE TOOLS]
 {tools}
 
-[ORIGINAL RESEARCH PAPER EXCERPT]
-{text}
+[REPRODUCIBLE RESULTS]
+{result}
+
+[METHODS]
+{method}
 
 [PREVIOUS RESEARCH TASK PROPOSAL]
 {query}
@@ -96,16 +128,20 @@ REVISE_USER = """
 [RECEIVED IMPROVEMENT SUGGESTIONS]
 {critic}
 
-Based on the "improvement suggestions" above and staying closely aligned with the "original research paper excerpt," optimize and refine the "previous research task proposal."
-🔴 [MANDATORY] Ensure the new proposal still clearly specifies how to employ exactly 3 different tools.
+Based on the improvement suggestions above, revise and optimize the previous research task proposal.
+🔴 [MANDATORY CONSTRAINTS]
+- The revised proposal must remain scientifically consistent with the provided reproducible results and methods.
+- You must clearly explain how exactly 3 different tools are orchestrated to verify, simulate, or extend the given results.
+- Do NOT introduce claims or objectives that cannot be supported by the given results.
 
 Return in strict JSON format (JSON only, no other text):
 {{
-  "new_research_query": "Detailed, clear description of the research query and objectives",
+  "new_research_query": "Detailed and precise research query grounded in the given reproducible results",
   "required_tools": ["Tool A", "Tool B", "Tool C"],
-  "research_scope_and_steps": "Phase-by-phase explanation of research scope, methodology, and specific logic of tool utilization",
+  "research_scope_and_steps": "Phase-by-phase explanation of methodology and tool usage explicitly tied to the reproducible results",
   "evaluation_metrics": ["Metric 1", "Metric 2"]
-}}"""
+}}
+"""
 
 SELECT_SYSTEM = """
 You are a Scientific Data Engineer. Your goal is to prepare a "Reproduction Context" for a computational agent.

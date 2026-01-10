@@ -68,47 +68,39 @@ app = build_workflow()
 
 
 async def selectnode(query_id, query, paper_id, paper) -> Dict[str, List[Dict[str, Any]]]:
-    print(f"Select paper range for query {query_id} paper id {paper_id} title {paper['title']}")
-    content, paragraphs = skeleton_to_list(paper['structure'], "full")
-    try:
-        candidates = await HybridSelectStep1(config.model).call(inputs={'content': content}, context={'paragraphs': paragraphs})
-    except Exception as e:
-        print(f"Step 1 {e}")
-        candidates = []
-    # with open("papers/step1.jsonl", "w") as f:
-    #     for x in candidates: f.write(json.dumps(x, ensure_ascii=False) + "\n")
-    # with open("papers/step1.jsonl") as f:
-    #     candidates = [json.loads(line.strip()) for line in f if line.strip()]
-    print(f"Paper {paper_id} {paper['title']} get {len(candidates)}")
-    tasks = [asyncio.create_task(HybridSelectStep2(config.model).call(inputs=c)) for c in candidates]
-    reproducible = []
-    for task in asyncio.as_completed(tasks):            
-        try:
-            result = await task
-            if result: 
-                reproducible.append(result)
-                with open("papers/step2.jsonl", "a+") as f:
-                    f.write(json.dumps(result, ensure_ascii=False) + "\n")
-        except Exception as e:
-            print(f"Step 2 {e}")
-    print(f"Paper {paper_id} {paper['title']} get {len(reproducible)}")
-    content = skeleton_to_dict(paper['structure'])
-    tasks = [asyncio.create_task(HybridSelectStep3(config.model).call(inputs={'sentence': c, 'paper': content})) for c in reproducible]
-    print(f"Paper get {len(tasks)}")
-    result_and_method = []
-    for task in asyncio.as_completed(tasks):            
-        try:
-            result = await task
-            if result: 
-                result_and_method.append(result)
-                with open("papers/step3.jsonl", "a+") as f:
-                    f.write(json.dumps(result, ensure_ascii=False) + "\n")
-        except Exception as e:
-            print(f"Step 3 {e}")
-    print(f"Paper {paper_id} {paper['title']} 3 get {len(result_and_method)}")
-    # TODO: filter
+    # print(f"Select paper range for query {query_id} paper id {paper_id} title {paper['title']}")
+    # content, paragraphs = skeleton_to_list(paper['structure'], "full")
+    # try:
+    #     candidates = await HybridSelectStep1(config.model).call(inputs={'content': content}, context={'paragraphs': paragraphs})
+    # except Exception as e:
+    #     print(f"Step 1 {e}")
+    #     candidates = []
+    # # print(f"Paper {paper_id} {paper['title']} get {len(candidates)}")
+    # tasks = [asyncio.create_task(HybridSelectStep2(config.model).call(inputs=c)) for c in candidates]
+    # reproducible = []
+    # for task in asyncio.as_completed(tasks):            
+    #     try:
+    #         result = await task
+    #         if result: 
+    #             reproducible.append(result)
+    #     except Exception as e:
+    #         print(f"Step 2 {e}")
+    # # print(f"Paper {paper_id} {paper['title']} 2 get {len(reproducible)}")
+    # content = skeleton_to_dict(paper['structure'])
+    # tasks = [asyncio.create_task(HybridSelectStep3(config.model).call(inputs={'sentence': c, 'paper': content})) for c in reproducible]
+    # result_and_method = []
+    # for task in asyncio.as_completed(tasks):            
+    #     try:
+    #         result = await task
+    #         if result: 
+    #             result_and_method.append(result)
+    #     except Exception as e:
+    #         print(f"Step 3 {e}")
+    # print(f"Paper {paper_id} {paper['title']} 3 get {len(result_and_method)}")
+    with open("papers/step3.jsonl") as f:
+        result_and_method = [json.loads(line.strip()) for line in f if line.strip()]
     for i, result in enumerate(result_and_method):
-        print(f"Start generate!")
+        print(f"Start generate result {i}!")
         await app.ainvoke({
             "query_id": query_id, 
             "query": query, 
@@ -116,6 +108,7 @@ async def selectnode(query_id, query, paper_id, paper) -> Dict[str, List[Dict[st
             "paper": paper['title'],
             "artifact": result
         })
+        break
 
 
 async def searchnode(query_id: int, query: str):

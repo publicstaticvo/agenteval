@@ -38,7 +38,11 @@ class GenerateNode:
         else:
             messages = [
                 {"role": "system", "content": GENERATE_SYSTEM},
-                {"role": "user", "content": GENERATE_USER.format(tools=self.tools, text=state.artifact)}
+                {"role": "user", "content": GENERATE_USER.format(
+                    tools=self.tools, 
+                    result=state.artifact['result'],
+                    method=state.artifact['method']
+                )}
             ]  
         # 一步到位
         try:
