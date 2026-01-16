@@ -38,8 +38,8 @@ class HybridSelectStep3(AsyncLLMClient):
     def _availability(self, response: str, context: dict):
         try:
             results = extract_json(response)
-            if results['method_type'].lower() != "dry": return {}
-            return {"result": context['input'], "method": results['method_sentences']}
+            # if results['method_type'].lower() != "dry": return {}
+            return {"result": context['input'], "method": results['method_sentences'], "method_type": results['method_type']}
         except Exception as e:
             print(e)
     

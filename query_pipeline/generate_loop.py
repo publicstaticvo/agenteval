@@ -10,9 +10,10 @@ from utils import extract_json
 
 
 class AsyncGenerateClient(AsyncLLMClient):
+
     def _availability(self, response: str, context: dict):
         response = extract_json(response)
-        return response['new_research_query'], response['required_tools']
+        return response, response['new_research_query'], response['required_tools'], response['probe_spec']['probe_dimensions']
 
 
 class GenerateNode:
@@ -22,32 +23,28 @@ class GenerateNode:
         self.tools = tools_desc
 
     async def __call__(self, state: GenerateState) -> dict | None:
-        """生成工具感知的优化查询 - 必须使用 3 个工具"""        
-        print(f"Generate query round {len(state.results) + 1} for paper {state.paper_id}")
-        if state.results:
-            messages = [
-                {"role": "system", "content": REVISE_SYSTEM},
-                {"role": "user", "content": REVISE_USER.format(
-                    tools=self.tools, 
-                    result=state.artifact['result'], 
-                    method=state.artifact['method'],
-                    query=state.results[-1]['optimized'], 
-                    critic=json.dumps(state.results[-1]['critic'], ensure_ascii=False, indent=2)
-                )}
-            ]                
-        else:
-            messages = [
-                {"role": "system", "content": GENERATE_SYSTEM},
-                {"role": "user", "content": GENERATE_USER.format(
-                    tools=self.tools, 
-                    result=state.artifact['result'],
-                    method=state.artifact['method']
-                )}
-            ]  
-        # 一步到位
+        # if state.results:
+        #     messages = [
+        #         {"role": "system", "content": REVISE_SYSTEM},
+        #         {"role": "user", "content": REVISE_USER.format(
+        #             tools=self.tools, 
+        #             result=state.artifact['result'], 
+        #             method=state.artifact['method'],
+        #             query=state.results[-1]['optimized'], 
+        #             critic=json.dumps(state.results[-1]['critic'], ensure_ascii=False, indent=2)
+        #         )}
+        #     ]                
+        messages = [
+            {"role": "system", "content": GENERATE_SYSTEM},
+            {"role": "user", "content": GENERATE_USER.format(
+                tools=self.tools, 
+                result=state.artifact['result'],
+                method=state.artifact['method']
+            )}
+        ]  
         try:
-            generated, tools_used = await self.client.call(messages, temperature=0.8)
-            return {"generated": generated, "tools_used": tools_used}
+            generated = await self.client.call(messages, temperature=0.8)
+            return {"generated": generated}
         except KeyboardInterrupt:
             raise
         except Exception as e:
@@ -71,32 +68,22 @@ class CriticNode:
 
     async def __call__(self, state: GenerateState) -> Optional[Dict]:
         """严格的学术评分 - 工具利用比重提升"""
-        tools_used = state.tools_used
-        generated = state.generated
-        if not generated: return
-
-        print(f"Critique round {len(state.results) + 1} for query {state.query_id} paper {state.paper_id}")
-        user = CRITIC_USER.format(
-            tools=self.tools, 
-            result=state.artifact['result'],
-            method=state.artifact['method'],
-            query=generated, 
-            num_tools=len(tools_used),
-            tools_used=', '.join(tools_used) if tools_used else 'No'
-        )      
+        if not state.generated: return
+             
         messages = [
             {"role": "system", "content": CRITIC_SYSTEM},
-            {"role": "user", "content": user}
+            {"role": "user", "content": CRITIC_USER.format(
+                tools=self.tools, 
+                result=state.artifact['result'],
+                method=state.artifact['method'],
+                query=state.generated, 
+                # num_tools=len(state.generated['required_tools']),
+                # tools_used=', '.join(state.generated['required_tools']) if state.generated['required_tools'] else 'No'
+            )}
         ]
         try:
             critic = await self.client.call(messages, temperature=0)
-            print(f"critic {state.query_id} iteration {len(state.results) + 1}")
-            return {"results": [{
-                "optimized": generated,
-                "score": critic['total_score'],
-                "tools_used": tools_used,
-                "critic": critic,
-            }]}
+            return {"critics": critic}
         except KeyboardInterrupt:
             raise
         except Exception as e:

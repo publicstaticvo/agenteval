@@ -5,9 +5,8 @@ from langgraph.graph import StateGraph
 from typing import Dict, List, Any, Optional
 
 from config import Config
+from state import GenerateState
 from search import process_paper
-from intro_select import SelectNode
-from state import GenerateState, GeneratePayload
 from generate_loop import GenerateNode, CriticNode
 from session_manager import openalex_search_paper, SessionManager
 from hybrid_select import HybridSelectStep1, HybridSelectStep2, HybridSelectStep3
@@ -20,15 +19,14 @@ tools_desc = format_tools_context(tools)
 _file_lock = asyncio.Lock()
     
 
-def stop_condition(state: GenerateState):
-    """严格的质量判定"""
-    if not state.results: return "generate" 
-    score = state.results[-1]['score']
-    
-    if (score >= 95 and len(state.tools_used) >= 3) or len(state.results) >= 10:        
-        print(f"The score for query {state.query} paper {state.paper} is {score}, can output now.")
-        return "save"  
-    return "generate"
+# def stop_condition(state: GenerateState):
+#     """严格的质量判定"""
+#     if not state.results: return "generate" 
+#     score = state.results[-1]['score']    
+#     if (score >= 95 and len(state.tools_used) >= 3) or len(state.results) >= 2:        
+#         print(f"The score for query {state.query} paper {state.paper} is {score}, can output now.")
+#         return "save"  
+#     return "generate"
 
 
 async def save_node(state: GenerateState):
@@ -36,28 +34,25 @@ async def save_node(state: GenerateState):
         async with aiofiles.open(config.workflow_output, "a+", encoding="utf-8") as f:
             content = json.dumps({
                 "query": state.query,
-                "query_id": state.query_id,
                 "paper_title": state.paper,
-                "total_iterations": len(state.results),
+                "result_and_method": state.artifact,
                 "final_version": state.generated,
-                "score": state.results[-1]['score'],
-                "tools_used": state.tools_used,
-                "detailed_results": state.results
+                "evaluations": state.critics
             }, ensure_ascii=False)
             await f.write(content + "\n")
 
 
 def build_workflow():
     # init
-    generate_node = GenerateNode(config.model, tools_desc)
+    generate_node = GenerateNode(config.generate_model, tools_desc)
     critic_node = CriticNode(config.critic_model, tools_desc)
-    workflow = StateGraph(GenerateState, input_schema=GeneratePayload)
+    workflow = StateGraph(GenerateState)
     workflow.add_node("generate", generate_node)
     workflow.add_node("critic", critic_node)
     workflow.add_node("save", save_node)
     workflow.set_entry_point("generate")
     workflow.add_edge("generate", "critic")
-    workflow.add_conditional_edges("critic", stop_condition)
+    workflow.add_conditional_edges("critic", lambda state: "save" if state.generated and state.critics else "generate")
     workflow.set_finish_point("save")
     return workflow.compile()
 
@@ -98,15 +93,16 @@ async def searchnode(query_id: int, query: str):
 
 
 async def selectnode(query_id, query, paper_id, paper) -> Dict[str, List[Dict[str, Any]]]:
-    # print(f"Select paper range for query {query_id} paper id {paper_id} title {paper['title']}")
+    print(f"Select paper range for query {query_id} paper id {paper_id} title {paper['title']}")
     content, paragraphs = skeleton_to_list(paper['structure'], "full")
     try:
-        candidates = await HybridSelectStep1(config.model).call(inputs={'content': content}, context={'paragraphs': paragraphs})
+        candidates = await HybridSelectStep1(config.support_model).call(inputs={'content': content}, context={'paragraphs': paragraphs})
     except Exception as e:
         print(f"Step 1 {e}")
         candidates = []
-    # print(f"Paper {paper_id} {paper['title']} get {len(candidates)}")
-    tasks = [asyncio.create_task(HybridSelectStep2(config.model).call(inputs=c)) for c in candidates]
+    with open(f"papers/step1_{paper_id}.jsonl", "w") as f: f.write("\n".join(json.dumps(x) for x in candidates))
+    print(f"Paper {paper_id} {paper['title']} get {len(candidates)}")
+    tasks = [asyncio.create_task(HybridSelectStep2(config.support_model).call(inputs=c)) for c in candidates]
     reproducible = []
     for task in asyncio.as_completed(tasks):            
         try:
@@ -115,9 +111,10 @@ async def selectnode(query_id, query, paper_id, paper) -> Dict[str, List[Dict[st
                 reproducible.append(result)
         except Exception as e:
             print(f"Step 2 {e}")
-    # print(f"Paper {paper_id} {paper['title']} 2 get {len(reproducible)}")
+    print(f"Paper {paper_id} {paper['title']} 2 get {len(reproducible)}")
+    with open(f"papers/step2_{paper_id}.jsonl", "w") as f: f.write("\n".join(json.dumps(x) for x in reproducible))
     content = skeleton_to_dict(paper['structure'])
-    tasks = [asyncio.create_task(HybridSelectStep3(config.model).call(inputs={'sentence': c, 'paper': content})) for c in reproducible]
+    tasks = [asyncio.create_task(HybridSelectStep3(config.support_model).call(inputs={'sentence': c, 'paper': content})) for c in reproducible]
     result_and_method = []
     for task in asyncio.as_completed(tasks):            
         try:
@@ -126,21 +123,28 @@ async def selectnode(query_id, query, paper_id, paper) -> Dict[str, List[Dict[st
                 result_and_method.append(result)
         except Exception as e:
             print(f"Step 3 {e}")
-    print(f"Paper {paper_id} {paper['title']} get {len(result_and_method)} reproducible dry results")
+    dry = [x for x in result_and_method if x['type'].lower() == "dry"]
+    with open(f"papers/step3_{paper_id}.jsonl", "w") as f: f.write("\n".join(json.dumps(x) for x in result_and_method))
+    # with open("papers/step3.jsonl") as f: result_and_method = [json.loads(line.strip()) for line in f if line.strip()]
+    print(f"Paper {paper_id} {paper['title']} get {len(dry)} reproducible results")
     task = [asyncio.create_task(app.ainvoke({
                 "query_id": query_id, 
                 "query": query, 
                 "paper_id": paper_id,
                 "paper": paper['title'],
                 "artifact": result
-            })) for result in result_and_method]
-    await asyncio.gather(*task, return_exceptions=True)
+            })) for result in dry]
+    await asyncio.gather(*task)
 
 
 async def main():
     try:
         await SessionManager.init()
-        await asyncio.gather(*[searchnode(i, query) for i, query in enumerate(queries)])
+        # await asyncio.gather(*[selectnode(i, query, 13, {"title": "13"}) for i, query in enumerate(queries)])
+        # with open("papers/Paper_8.json") as f: paper = json.load(f)['content']
+        # await selectnode(0, queries[0], 8, paper)
+        with open("papers/Paper_13.json") as f: paper = json.load(f)['content']
+        await selectnode(0, queries[0], 13, paper)
     finally:
         await SessionManager.close()
 

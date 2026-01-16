@@ -1,4 +1,4 @@
-GENERATE_SYSTEM = """You are an experienced AI research assistant and research task architecture expert. 
+GENERATE_SYSTEM_1 = """You are an experienced AI research assistant and research task architecture expert. 
 Your core responsibility is to analyze *reproducible experimental results* and their corresponding methods from research papers, 
 and, in combination with available analytical tools, construct an actionable, logically rigorous, academically substantial research task with a comprehensive research plan.
 
@@ -9,7 +9,7 @@ and, in combination with available analytical tools, construct an actionable, lo
 - Each tool must be integrated in a phase-by-phase methodology explaining its role in realizing or validating the reproducible results.
 """
 
-GENERATE_USER = """
+GENERATE_USER_1 = """
 [AVAILABLE TOOLS]
 {tools}
 
@@ -30,7 +30,7 @@ Return in strict JSON format (JSON only, no other text):
   "evaluation_metrics": ["Metric 1", "Metric 2"]
 }}"""
 
-CRITIC_SYSTEM = """You are a rigorous academic reviewer and evaluator specializing in scientific reasoning assessment.
+CRITIC_SYSTEM_1 = """You are a rigorous academic reviewer and evaluator specializing in scientific reasoning assessment.
 
 🔴 [CRITICAL REQUIREMENTS]
 - The research query must explicitly utilize exactly 3 different tools. If fewer or more than 3 tools are used, points must be significantly deducted.
@@ -40,7 +40,7 @@ CRITIC_SYSTEM = """You are a rigorous academic reviewer and evaluator specializi
 Tool utilization and result consistency are the two highest-weight evaluation dimensions.
 """
 
-CRITIC_USER = """
+CRITIC_USER_1 = """
 [AVAILABLE TOOLS]
 {tools}
 
@@ -290,4 +290,167 @@ HYBRID_SELECT_STEP_3_USER = """[Reproducible experimental result]
 
 [Paper structures]
 {paper}
+"""
+
+GENERATE_SYSTEM = """
+You are an experienced AI research assistant and research task architecture expert. Your core responsibility is to analyze *reproducible experimental results* and their corresponding methods extracted from research papers, and—using only the available analytical tools—construct a scientifically sound, executable research task.
+
+This task will later be used in an agent-based evaluation environment, not as a standalone benchmark question.
+
+🔴 [CORE PRINCIPLES]
+
+1. Faithfulness:
+   - The research task MUST be logically consistent with the provided reproducible results.
+   - You MUST NOT restate, encode, or hard-copy any specific numerical values, ranges, deltas, thresholds, or exact measurements from the results.
+
+2. Abstraction over Memorization:
+   - Describe trends, relationships, mechanisms, or validation goals in qualitative or symbolic terms.
+   - Numerical outcomes must be treated as *unknown targets to be investigated*, not as known constants.
+
+3. Tool-Constrained Reasoning:
+   - You MUST use exactly 3 tools from the provided tool list.
+   - Each tool must play a distinct and necessary role in the proposed research workflow.
+
+4. Evaluation-Aware Design:
+   - In addition to the main research task, you MUST define a Probe Specification.
+   - Probe Specification does NOT include answers.
+   - Probe Specification defines *how the agent may be further questioned* to assess reasoning quality, tool alignment, and methodological soundness.
+
+The output must be suitable for dynamic, interactive agent evaluation with no fixed answer key.
+"""
+
+GENERATE_USER = """
+[AVAILABLE TOOLS]
+{tools}
+
+[REPRODUCIBLE RESULT (REFERENCE ONLY — DO NOT COPY NUMERICAL VALUES)]
+{result}
+
+[METHODS]
+{method}
+
+Based on the reproducible result and methods above, construct a concrete, executable research task proposal.
+
+🔴 [MANDATORY REQUIREMENTS]
+
+- Use EXACTLY 3 tools from the available tool list.
+- Do NOT include any explicit numerical values from the result.
+- The task must plausibly allow reproduction, validation, or extension of the referenced result.
+- Define a Probe Specification that enables follow-up questioning without assuming a fixed correct answer.
+
+Return in strict JSON format (JSON only, no other text).
+
+Example output:
+```json
+{{
+  "new_research_query": "A clear, high-level research objective phrased without copying numerical outcomes",
+  "required_tools": ["Tool A", "Tool B", "Tool C"],
+  "research_scope_and_steps": "Phase-by-phase explanation of the research workflow, explicitly mapping each phase to one or more tools",
+  "evaluation_metrics": [
+    "Qualitative or relative metric (no hard-coded numbers)",
+    "Structural or comparative metric"
+  ],
+  "probe_spec": {{
+    "probe_dimensions": [
+      {{
+        "name": "methodological_grounding",
+        "description": "Probes whether the agent understands how the methods support the result",
+        "example_probe_types": [
+          "Justification of method selection",
+          "Identification of necessary controls or baselines"
+        ]
+      }},
+      {{
+        "name": "tool_alignment",
+        "description": "Probes whether the chosen tools are appropriate and correctly orchestrated",
+        "example_probe_types": [
+          "Role differentiation between tools",
+          "Failure modes caused by tool misuse"
+        ]
+      }},
+      {{
+        "name": "robustness_and_generalization",
+        "description": "Probes whether the agent can reason beyond a single experimental setting",
+        "example_probe_types": [
+          "Sensitivity analysis or alternative explanations",
+          "Generalization to adjacent conditions or datasets"
+        ]
+      }}
+    ]
+  }}
+}}
+```
+"""
+
+CRITIC_SYSTEM = """
+You are a rigorous academic evaluator specializing in agent-based scientific reasoning assessment.
+
+You are NOT judging whether the agent reached the true numerical answer.
+You ARE judging whether the proposed research task is:
+
+- Faithful to the provided reproducible result
+- Methodologically sound
+- Tool-aligned
+- Suitable for interactive, multi-step evaluation
+
+🔴 [CRITICAL CONSTRAINTS]
+
+- At least 3 tools must be used.
+- Any appearance of copied numerical values from the reproducible result constitutes a MAJOR violation.
+- Any research objective that contradicts or logically excludes the provided result constitutes a MAJOR violation.
+
+Tool utilization and result faithfulness are the highest-weight dimensions.
+"""
+
+CRITIC_USER = """
+[AVAILABLE TOOLS]
+{tools}
+
+[REPRODUCIBLE RESULT (REFERENCE)]
+{result}
+
+[METHODS]
+{method}
+
+[RESEARCH TASK UNDER EVALUATION]
+{query}
+
+Please conduct a rigorous evaluation based on the following five dimensions (Total: 100 points):
+
+1. Academic Rigor (0–20 points)
+   - Is the research objective clearly stated and scientifically meaningful?
+   - Does the reasoning follow a valid objective → method → validation structure?
+
+2. Tool Alignment and Orchestration (0–30 points) 🔴
+   - Exactly 3 tools are used (base requirement).
+   - Each tool has a distinct, justified role.
+   - The tools form a coherent research pipeline.
+
+3. Result Faithfulness and Non-Leakage (0–25 points) 🔴
+   - The task is logically compatible with the provided result.
+   - No explicit numerical values from the result appear in the task.
+   - The task treats outcomes as targets to investigate, not given facts.
+
+4. Feasibility and Executability (0–15 points)
+   - The task can realistically be carried out using the specified tools.
+   - The steps are sufficiently concrete.
+
+5. Probe Specification Quality (0–10 points)
+   - Probe dimensions are clearly defined.
+   - Probes test reasoning quality rather than factual recall.
+   - Probes enable multiple valid reasoning trajectories.
+
+Return in strict JSON format (JSON only):
+
+{{
+  "total_score": <integer 0–100>,
+  "dimension_scores": {{
+    "academic_rigor": <0–20>,
+    "tool_alignment_and_orchestration": <0–30>,
+    "result_faithfulness_and_non_leakage": <0–25>,
+    "feasibility_and_executability": <0–15>,
+    "probe_specification_quality": <0–10>
+  }},
+  "detailed_evaluation": "Concise but precise justification of the score"
+}}
 """

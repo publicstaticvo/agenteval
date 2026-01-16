@@ -39,13 +39,16 @@ class AsyncLLMClient(ABC):
         retry=retry_if_exception(should_retry) | retry_if_result(lambda x: x is None)
     )
     async def _post(self, payload: dict, context: dict) -> dict:
-        async with RateLimit.LLM_SEMAPHORE:
-            async with SessionManager.get().post(self.url, json=payload, headers=self.headers,
-                                                 timeout=aiohttp.ClientTimeout(total=self.timeout)) as resp:
-                resp.raise_for_status()
-                data = await resp.json()
-        content = data["choices"][0]["message"]["content"]
-        return self._availability(content, context)
+        try:
+            async with RateLimit.LLM_SEMAPHORE:
+                async with SessionManager.get().post(self.url, json=payload, headers=self.headers,
+                                                    timeout=aiohttp.ClientTimeout(total=self.timeout)) as resp:
+                    resp.raise_for_status()
+                    data = await resp.json()
+            content = data["choices"][0]["message"]["content"]
+            return self._availability(content, context)
+        except Exception as e:
+            print(type(e), e)
         
     @abstractmethod
     def _availability(self, response, context):

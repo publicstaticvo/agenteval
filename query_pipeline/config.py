@@ -20,7 +20,8 @@ class Config:
     input_file: str = "chem.txt"
     tool_file: str = "tools.json"
     workflow_output: str = "workflow.json"
-    model: LLMServerInfo = field(default_factory=LLMServerInfo)
+    support_model: LLMServerInfo = field(default_factory=LLMServerInfo)
+    generate_model: LLMServerInfo = field(default_factory=LLMServerInfo)
     critic_model: LLMServerInfo = field(default_factory=LLMServerInfo)
 
     @classmethod
@@ -32,6 +33,7 @@ class Config:
             tool_file=config['tool_file'],
             n_queries=config['n_queries'],
             workflow_output=config['workflow_output'],
-            model=LLMServerInfo(**config['model']),
+            support_model=LLMServerInfo(**config['support_model']),
+            generate_model=LLMServerInfo(**config['generate_model']),
             critic_model=LLMServerInfo(**config['critic_model']),
         )
