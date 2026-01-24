@@ -28,11 +28,16 @@ def valid_check(query: str, target: str) -> bool:
 
 def extract_json(text: str) -> dict:
     """从文本中提取 JSON 对象"""
-    if not text:
-        return {}
+    if not text: return {}
     
     try:
         return json.loads(text)
+    except Exception:
+        pass
+
+    try:
+        pattern = re.findall(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)[-1]
+        return json.loads(pattern)
     except Exception:
         pass
     
@@ -153,8 +158,15 @@ def skeleton_to_dict(paper: list[str | dict]) -> list[dict]:
         if isinstance(p, str):  # 章节标题
             repr_dict.append({"section_name": p.strip(), "paragraphs": []})
         else:
+            if not repr_dict: repr_dict.append({"section_name": "Paper Content", "paragraphs": []})
             repr_dict[-1]['paragraphs'].append(re.sub(r"\s+", " ", p['text']).strip())
     return repr_dict
+
+
+def skeleton_to_text(paper: list[str | dict]) -> str:
+    repr_dict = skeleton_to_dict(paper)
+    repr_str = [f"{s['section_name']}\n\n{'\n\n'.join(s['paragraphs'])}" for i, s in enumerate(repr_dict)]
+    return '\n\n'.join(repr_str)
 
 
 def save_result(result: dict, file_path: str) -> None:

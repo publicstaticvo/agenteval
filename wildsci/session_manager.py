@@ -35,7 +35,7 @@ OPENALEX_SELECT = 'id,title,best_oa_location,locations'
 
 class RateLimit:
     SEARCH_SEMAPHORE = asyncio.Semaphore(5)                # 搜索 API
-    LLM_SEMAPHORE = asyncio.Semaphore(100)       # LLM
+    LLM_SEMAPHORE = asyncio.Semaphore(20)       # LLM
     PARSE_SEMAPHORE = asyncio.Semaphore(5)                 # GROBID docker镜像本地解析
 
 
@@ -46,7 +46,7 @@ class SessionManager:
     async def init(cls):
         """进入上下文时调用"""
         if cls._global_session is None:
-            connector = aiohttp.TCPConnector(limit=150, limit_per_host=100, ttl_dns_cache=300)
+            connector = aiohttp.TCPConnector(limit=100, limit_per_host=50, ttl_dns_cache=300)
             cls._global_session = aiohttp.ClientSession(
                 connector=connector,
                 timeout=aiohttp.ClientTimeout(total=60)

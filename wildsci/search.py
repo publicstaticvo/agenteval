@@ -1,5 +1,5 @@
 import random
-import aiohttp, asyncio, io
+import aiohttp, asyncio, aiofiles, io
 from typing import Optional
 from tenacity import (
     retry,
@@ -131,6 +131,43 @@ async def parse_with_grobid(session: aiohttp.ClientSession, pdf_buffer: io.Bytes
         async with session.post(url, data=data, timeout=aiohttp.ClientTimeout(total=60)) as resp:
             resp.raise_for_status()
             return await resp.text()
+            
+    except KeyboardInterrupt:
+        raise
+    except asyncio.TimeoutError:
+        print("GROBID timeout, will retry")
+        raise
+    except aiohttp.ClientError as e:
+        print(f"GROBID client error: {e}, will retry")
+        raise
+    except Exception as e:
+        print(f"GROBID unexpected error: {e}")
+        return None
+    
+
+async def parse_pdf_file(session: aiohttp.ClientSession, pdf_file: str) -> Optional[str]:
+    """通过 GROBID 解析 PDF（带重试）"""
+    url = f"{GROBID_URL}/api/processFulltextDocument"
+    try:
+        # 添加随机延迟避免过载
+        await asyncio.sleep(2 * random.random())
+
+        async with aiofiles.open(pdf_file, "rb") as f:
+            pdf_buffer = await f.read()
+        
+        # 构造 multipart/form-data
+        data = aiohttp.FormData()
+        data.add_field('input', pdf_buffer, filename='paper.pdf', content_type='application/pdf')
+        
+        async with RateLimit.PARSE_SEMAPHORE:
+            async with session.post(url, data=data, timeout=aiohttp.ClientTimeout(total=60)) as resp:
+                resp.raise_for_status()
+                xml_text = await resp.text()
+        
+        if not xml_text: return {}
+        paper = await asyncio.to_thread(parser.parse, xml_text)
+        abstract = " ".join(p.text for p in paper.abstract.paragraphs) if paper.abstract else "None"
+        return {"title": paper.title, "abstract": abstract, "path": pdf_file, "structure": paper.get_skeleton()}
             
     except KeyboardInterrupt:
         raise

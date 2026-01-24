@@ -23,25 +23,21 @@ class GenerateNode:
         self.tools = tools_desc
 
     async def __call__(self, state: GenerateState) -> dict | None:
-        # if state.results:
-        #     messages = [
-        #         {"role": "system", "content": REVISE_SYSTEM},
-        #         {"role": "user", "content": REVISE_USER.format(
-        #             tools=self.tools, 
-        #             result=state.artifact['result'], 
-        #             method=state.artifact['method'],
-        #             query=state.results[-1]['optimized'], 
-        #             critic=json.dumps(state.results[-1]['critic'], ensure_ascii=False, indent=2)
-        #         )}
-        #     ]                
-        messages = [
-            {"role": "system", "content": GENERATE_SYSTEM},
-            {"role": "user", "content": GENERATE_USER.format(
-                tools=self.tools, 
-                result=state.artifact['result'],
-                method=state.artifact['method']
-            )}
-        ]  
+        if state.results:
+            messages = [
+                {"role": "system", "content": REVISE_SYSTEM},
+                {"role": "user", "content": REVISE_USER.format(
+                    tools=self.tools, 
+                    text=state.artifact, 
+                    query=state.results[-1]['optimized'], 
+                    critic=json.dumps(state.results[-1]['critic'], ensure_ascii=False, indent=2)
+                )}
+            ]  
+        else:
+            messages = [
+                {"role": "system", "content": GENERATE_SYSTEM},
+                {"role": "user", "content": GENERATE_USER.format(tools=self.tools, text=state.artifact)}
+            ]     
         try:
             generated = await self.client.call(messages, temperature=0.8)
             return {"generated": generated}
@@ -50,6 +46,7 @@ class GenerateNode:
         except Exception as e:
             if isinstance(e, RetryError): print(f"GenerateNode {e.last_attempt.result()}")
             else: print(f"GenerateNode {e}")
+            return {"generated": {}}
 
 
 class AsyncCriticClient(AsyncLLMClient):
@@ -77,8 +74,8 @@ class CriticNode:
                 result=state.artifact['result'],
                 method=state.artifact['method'],
                 query=state.generated, 
-                # num_tools=len(state.generated['required_tools']),
-                # tools_used=', '.join(state.generated['required_tools']) if state.generated['required_tools'] else 'No'
+                num_tools=len(state.generated['required_tools']),
+                tools_used=', '.join(state.generated['required_tools']) if state.generated['required_tools'] else 'No'
             )}
         ]
         try:

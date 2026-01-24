@@ -8,6 +8,7 @@ class GenerateState(BaseModel):
     query_id: int
     paper_id: int
     paper: str
-    artifact: Dict[str, Any]
+    artifact: str
     generated: Dict[str, Any] = Field(default_factory=dict)
     critics: Dict[str, Any] = Field(default_factory=dict)
+    results: Annotated[List, add]

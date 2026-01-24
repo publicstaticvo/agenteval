@@ -22,11 +22,10 @@ class Config:
     workflow_output: str = "workflow.json"
     support_model: LLMServerInfo = field(default_factory=LLMServerInfo)
     generate_model: LLMServerInfo = field(default_factory=LLMServerInfo)
-    critic_model: LLMServerInfo = field(default_factory=LLMServerInfo)
+    critic_models: list[LLMServerInfo] = field(default_factory=list)
 
     @classmethod
     def from_yaml(cls, config_path):
-        if not os.path.exists(config_path): return cls()
         with open(config_path, encoding='utf-8') as f: config = yaml.safe_load(f)
         return cls(
             input_file=config['input_file'],
@@ -35,5 +34,5 @@ class Config:
             workflow_output=config['workflow_output'],
             support_model=LLMServerInfo(**config['support_model']),
             generate_model=LLMServerInfo(**config['generate_model']),
-            critic_model=LLMServerInfo(**config['critic_model']),
+            critic_models=[LLMServerInfo(**c) for c in config['critic_model']],
         )

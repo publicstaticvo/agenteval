@@ -1,25 +1,17 @@
-GENERATE_SYSTEM_1 = """You are an experienced AI research assistant and research task architecture expert. 
-Your core responsibility is to analyze *reproducible experimental results* and their corresponding methods from research papers, 
-and, in combination with available analytical tools, construct an actionable, logically rigorous, academically substantial research task with a comprehensive research plan.
+GENERATE_SYSTEM_1 = """You are an experienced AI research assistant and research task architecture expert. Your core responsibility is to analyze the given structural knowledge from research papers provided by users, and in combination with available analytical tools, construct an actionable, logically rigorous, academically substantial research task with a comprehensive research plan.
 
 🔴 [CORE REQUIREMENTS] 
-- The research task must explicitly leverage the provided reproducible results and methods from the paper excerpt.
 - Your research query must be sufficiently complex, academically profound, and scientifically valuable. 
-- You must specify how to systematically employ exactly 3 different tools to investigate, simulate, or extend the research results.
-- Each tool must be integrated in a phase-by-phase methodology explaining its role in realizing or validating the reproducible results.
-"""
+- Your proposal must explicitly specify how to systematically employ at least 3 different tools to solve or explore the research query."""
 
 GENERATE_USER_1 = """
 [AVAILABLE TOOLS]
 {tools}
 
-[REPRODUCIBLE RESULTS]
-{result}
+[STRUCTURAL KNOWLEDGE FROM THE ORIGINAL RESEARCH PAPER]
+{text}
 
-[METHODS]
-{method}
-
-Based on the above reproducible results and methods, construct a concrete, executable research task proposal.
+Based on the above information, construct a concrete, executable research task proposal.
 🔴 [MANDATORY] You must precisely select and detail how to orchestrate exactly 3 available tools to complete this research.
 
 Return in strict JSON format (JSON only, no other text):
@@ -43,12 +35,6 @@ Tool utilization and result consistency are the two highest-weight evaluation di
 CRITIC_USER_1 = """
 [AVAILABLE TOOLS]
 {tools}
-
-[REPRODUCIBLE RESULTS]
-{result}
-
-[METHODS]
-{method}
 
 [RESEARCH TASK UNDER EVALUATION]
 {query}
