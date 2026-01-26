@@ -60,7 +60,7 @@ async def rewrite(generated: list[dict[str, any]]):
 async def test(generated: dict[str, any]):
     tasks = []
     for c in config.critic_models:
-        tasks.append(asyncio.create_task(Tester(c).call(inputs=generated, top_p=0.95)))
+        tasks.append(asyncio.create_task(Tester(c).call(inputs=generated, top_p=0.95, max_tokens=8192)))
     # c.model: [] for c in config.critic_models
     answers = {}
     K_count = 0
@@ -92,7 +92,7 @@ async def further_rewrite(generated: list[dict[str, any]]):
 
 
 async def critic(generated: dict[str, any]):
-    tasks = [asyncio.create_task(Critic(c).call(inputs=generated, top_p=0.95, max_tokens=16384)) for c in config.critic_models]
+    tasks = [asyncio.create_task(Critic(c).call(inputs=generated, top_p=0.95, max_tokens=8192)) for c in config.critic_models]
     answers = {}
     K_count = 0
     for task in asyncio.as_completed(tasks):
@@ -159,7 +159,7 @@ async def generateloop(paper: dict[str, Any]):
             continue
 
     async with _file_lock:
-        async with aiofiles.open("sample_queries.jsonl", "a+") as f:
+        async with aiofiles.open(config.workflow_output, "a+", encoding='utf-8') as f:
             for result in tested_generated:
                 result['paper_id'] = paper['id']
                 result['title'] = paper['title']
@@ -169,13 +169,12 @@ async def generateloop(paper: dict[str, Any]):
 async def gen():
     try:
         await SessionManager.init()
-        if os.path.exists("sample_queries.jsonl"): os.remove("sample_queries.jsonl")
+        if os.path.exists(config.workflow_output): os.remove(config.workflow_output)
         tasks = []
-        for i, n in enumerate(glob.glob("samplepaper/*.json")):
+        for i, n in enumerate(glob.glob(f"{config.input_file}/*.json")):
             with open(n, encoding='utf-8') as f: paper = json.load(f)
             paper['id'] = i
             tasks.append(asyncio.create_task(generateloop(paper)))
-            break
         await asyncio.gather(*tasks, return_exceptions=True)
     finally:
         await SessionManager.close()
@@ -185,7 +184,7 @@ async def debug_test():
     try:
         await SessionManager.init()
         tasks = []
-        with open("sample_queries.jsonl") as f:
+        with open(config.workflow_output, encoding='utf-8') as f:
             for x in f:
                 if x.strip():
                     tasks.append(asyncio.create_task(test(json.loads(x.strip())['query'])))
