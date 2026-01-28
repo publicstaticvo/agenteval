@@ -20,9 +20,9 @@ parser = XMLPaperParser()
 
 def grobid_should_retry(exception: Exception) -> bool:
     if isinstance(exception, asyncio.TimeoutError): return True
-    if isinstance(exception, aiohttp.ClientError): return True
     if isinstance(exception, aiohttp.ServerDisconnectedError): return True
-    if isinstance(exception, aiohttp.ClientResponseError) and exception.status in [429, 503]: return True
+    if isinstance(exception, aiohttp.ClientResponseError): return exception.status in [429, 503]
+    if isinstance(exception, aiohttp.ClientError): return True
     return False
 
 
@@ -31,7 +31,6 @@ async def process_paper(session: aiohttp.ClientSession, paper_meta: dict) -> Opt
     
     # 为该论文的所有 URL 创建任务
     tasks = [asyncio.create_task(try_one_url(session, url)) for url in list(yield_location(paper_meta))]
-    print(f"location numbers: {len(tasks)}")
     
     # 使用 as_completed 获取第一个成功的结果
     try:
@@ -66,27 +65,17 @@ async def try_one_url(session: aiohttp.ClientSession, url: str) -> Optional[dict
         try:
             # 步骤1: 下载 PDF
             pdf_buffer = await download_pdf(session, url)
-            if not pdf_buffer:
-                return None
-            
+            if not pdf_buffer: return            
             # 步骤2: 通过 GROBID 解析
             xml_text = await parse_with_grobid(session, pdf_buffer)
-            if not xml_text:
-                return None
-            
+            if not xml_text: return            
             # 步骤3: 用 XMLPaperParser 解析 XML
             paper = await asyncio.to_thread(parser.parse, xml_text)
-
             # abstract
-            abstract = " ".join(p.text for p in paper.abstract.paragraphs) if paper.abstract else "None"
-            
-            return {"title": paper.title, "abstract": abstract, "url": url, "structure": paper.get_skeleton()}
-        
-        except KeyboardInterrupt:
-            raise
-            
-        except Exception as e:
-            return None
+            abstract = " ".join(p.text for p in paper.abstract.paragraphs) if paper.abstract else None            
+            return {"title": paper.title, "abstract": abstract, "url": url, "structure": paper.get_skeleton()}        
+        except KeyboardInterrupt: raise            
+        except Exception: pass
 
 
 @retry(
@@ -101,11 +90,12 @@ async def download_pdf(session: aiohttp.ClientSession, url: str, timeout: int = 
             resp.raise_for_status()
             content = await resp.read()
             return io.BytesIO(content)
-    except KeyboardInterrupt:
-        raise
+    except KeyboardInterrupt: raise
+    except aiohttp.ClientResponseError as e:
+        if e.status in [400, 401, 403, 404]: raise
+        elif e.status not in [503, 418, 429]: print(f"Download failed {url}: {e}")
     except Exception as e:
         print(f"Download failed {url}: {e}")
-        return None
 
 
 @retry(
@@ -128,7 +118,7 @@ async def parse_with_grobid(session: aiohttp.ClientSession, pdf_buffer: io.Bytes
         data = aiohttp.FormData()
         data.add_field('input', pdf_buffer.read(), filename='paper.pdf', content_type='application/pdf')
         
-        async with session.post(url, data=data, timeout=aiohttp.ClientTimeout(total=60)) as resp:
+        async with session.post(url, data=data, timeout=aiohttp.ClientTimeout(total=600)) as resp:
             resp.raise_for_status()
             return await resp.text()
             
@@ -137,12 +127,13 @@ async def parse_with_grobid(session: aiohttp.ClientSession, pdf_buffer: io.Bytes
     except asyncio.TimeoutError:
         print("GROBID timeout, will retry")
         raise
-    except aiohttp.ClientError as e:
-        print(f"GROBID client error: {e}, will retry")
+    except aiohttp.ClientResponseError as e:
+        if e.status in [429, 503]: print(f"GROBID client error: {e.status}, will retry")
+        else: print(f"GROBID client error: {e.status}, wont retry")
         raise
     except Exception as e:
         print(f"GROBID unexpected error: {e}")
-        return None
+        return
     
 
 async def parse_pdf_file(session: aiohttp.ClientSession, pdf_file: str) -> Optional[str]:
@@ -160,23 +151,16 @@ async def parse_pdf_file(session: aiohttp.ClientSession, pdf_file: str) -> Optio
         data.add_field('input', pdf_buffer, filename='paper.pdf', content_type='application/pdf')
         
         async with RateLimit.PARSE_SEMAPHORE:
-            async with session.post(url, data=data, timeout=aiohttp.ClientTimeout(total=60)) as resp:
+            async with session.post(url, data=data, timeout=aiohttp.ClientTimeout(total=600)) as resp:
                 resp.raise_for_status()
                 xml_text = await resp.text()
         
         if not xml_text: return {}
         paper = await asyncio.to_thread(parser.parse, xml_text)
-        abstract = " ".join(p.text for p in paper.abstract.paragraphs) if paper.abstract else "None"
-        return {"title": paper.title, "abstract": abstract, "path": pdf_file, "structure": paper.get_skeleton()}
+        abstract = " ".join(p.text for p in paper.abstract.paragraphs) if paper.abstract else None
+        return {"title": paper.title, "abstract": abstract, "url": pdf_file, "structure": paper.get_skeleton()}
             
     except KeyboardInterrupt:
         raise
-    except asyncio.TimeoutError:
-        print("GROBID timeout, will retry")
-        raise
-    except aiohttp.ClientError as e:
-        print(f"GROBID client error: {e}, will retry")
-        raise
     except Exception as e:
-        print(f"GROBID unexpected error: {e}")
-        return None
+        return

@@ -5,12 +5,49 @@ import asyncio, aiofiles
 from typing import Dict, List, Any, Optional
 
 from config import Config
+from search import process_paper
 from utils import skeleton_to_text
-from session_manager import SessionManager
+from session_manager import SessionManager, openalex_search_paper
 from llm_client import Generate, Filter, Rewrite, Tester, ScientificSignificance, Critic
 
 config = Config.from_yaml("config.yaml")
 _file_lock = asyncio.Lock()
+
+
+async def searchquery(query_id: int, query: str, papers_per_query: int = 200):
+    """主入口：搜索并下载论文"""
+    print(f"Searching papers for {query} ...")
+    
+    # 1. 调用异步搜索 OpenAlex
+    filters = {"default.search": query, "concepts.id": "C192562407"}
+    search_result = await openalex_search_paper("works", filter=filters, per_page=papers_per_query)
+    search_result = search_result.get("results", [])
+    print(f"Search papers for {query}, get {len(search_result)} results")
+        
+    # 2. 并发处理所有论文的所有 URL，每处理成功一个就ainvoke一个子图
+    session = SessionManager.get()
+    async def process_single_paper(i, paper_meta):
+        if not paper_meta: return False
+        try:
+            paper_data = await process_paper(session, paper_meta)  # title, abstract, url, skeleton
+            if paper_data:
+                print(f"Paper {paper_meta['title']} ready. Ainvoke a generate loop.")
+                with open(f"papers/Paper_q{query_id}p{i}.json", "w") as f: 
+                    paper_data['id'] = f"q{query_id}p{i}"
+                    if not paper_data['title']: paper_data['title'] = paper_meta['title']
+                    json.dump(paper_data, f, indent=2, ensure_ascii=False)
+                await generateloop(paper_data)
+                # await selectnode(query_id, query, i, paper_data)              
+                print(f"Paper {paper_meta['title']} loop concludes.")
+        except Exception as e:
+            print(f"Metadata {i} of query id {query_id} query {query} fails an {e}")
+
+    tasks = []
+    for i, paper_meta in enumerate(search_result):
+        # 为每篇论文创建任务（内部会尝试所有 URL）
+        tasks.append(asyncio.create_task(process_single_paper(i, paper_meta)))
+    
+    await asyncio.gather(*tasks)
 
 
 async def generate(content: dict[str, Any]):
@@ -193,5 +230,15 @@ async def debug_test():
         await SessionManager.close()
 
 
+async def search():
+    try:
+        await SessionManager.init()
+        queries = ["graphene", "thermal conductivity", "electric properties", "quantum transport", "light-matter interaction"]
+        tasks = [asyncio.create_task(searchquery(i, q)) for i, q in enumerate(queries)]
+        await asyncio.gather(*tasks, return_exceptions=True)
+    finally:
+        await SessionManager.close()
+
+
 if __name__ == "__main__":
-    asyncio.run(gen())
+    asyncio.run(search())

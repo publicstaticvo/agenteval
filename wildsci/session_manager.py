@@ -34,9 +34,9 @@ OPENALEX_SELECT = 'id,title,best_oa_location,locations'
 
 
 class RateLimit:
-    SEARCH_SEMAPHORE = asyncio.Semaphore(5)                # 搜索 API
+    SEARCH_SEMAPHORE = asyncio.Semaphore(4)                # 搜索 API
     LLM_SEMAPHORE = asyncio.Semaphore(20)       # LLM
-    PARSE_SEMAPHORE = asyncio.Semaphore(5)                 # GROBID docker镜像本地解析
+    PARSE_SEMAPHORE = asyncio.Semaphore(4)                 # GROBID docker镜像本地解析
 
 
 class SessionManager:

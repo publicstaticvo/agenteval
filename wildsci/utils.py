@@ -26,9 +26,63 @@ def valid_check(query: str, target: str) -> bool:
     return normalize(query) == normalize(target)
 
 
+def robust_backslash(text: str) -> str:
+    result = []
+    i = 0
+    in_latex = False
+    
+    while i < len(text):
+        char = text[i]
+        
+        # 处理 $ 符号
+        if char == '$':
+            if i == 0 or text[i - 1] != '$': in_latex = not in_latex
+            result.append(char)
+            i += 1
+        # 处理反斜杠
+        elif char == '\\' and i + 1 < len(text):
+            next_char = text[i + 1]            
+            if in_latex:
+                # 在 LaTeX 块内
+                # 判断是否是真正的转义序列：n, t, r, \\ 
+                # 但需要检查后续：如果 \n 后面跟着字母，则它是 \nabla 等命令的一部分
+                if next_char in ('n', 't', 'r'):
+                    # 检查再后面的字符
+                    if i + 2 < len(text) and text[i + 2].isalpha():
+                        # 如 \nabla, \tilde, \rho - 是 LaTeX 命令，需要双倍
+                        result.append('\\\\')
+                        result.append(next_char)
+                        i += 2
+                    else:
+                        # 真正的转义序列（\n 后面是非字母），保留
+                        result.append('\\')
+                        result.append(next_char)
+                        i += 2
+                elif next_char == '\\':
+                    # \\，保留
+                    result.append('\\')
+                    result.append(next_char)
+                    i += 2
+                else:
+                    # 其他字符后的反斜杠（如 \alpha, \beta, \frac），双倍处理
+                    result.append('\\\\')
+                    result.append(next_char)
+                    i += 2
+            else:
+                # 在 LaTeX 块外，保持原样
+                result.append('\\')
+                i += 1
+        else:
+            result.append(char)
+            i += 1
+    
+    return ''.join(result)
+
+
 def extract_json(text: str) -> dict:
     """从文本中提取 JSON 对象"""
     if not text: return {}
+    text = robust_backslash(text)
     
     try:
         return json.loads(text)
@@ -178,3 +232,36 @@ def save_result(result: dict, file_path: str) -> None:
         raise
     except Exception:
         pass
+
+
+if __name__ == "__main__":
+    test_cases = [
+        # 基础 LaTeX 修复
+        r'{"equation": "$\alpha = \beta + \gamma$"}',
+        
+        # 包含真正换行符 \n（后面跟着非字母，如空格或引号）
+        r'{"text": "第一行\n第二行", "math": "$\frac{1}{2}$"}',
+        
+        # 边界情况：\n 作为 LaTeX 命令的一部分（\nabla）
+        r'{"eq": "$\nabla \cdot \vec{E} = \rho$", "text": "line1\nline2"}',
+        
+        # \b 作为 beta 而非退格符
+        r'{"math": "$\beta = 2$", "char": "退格:\b"}',
+        
+        # 混合情况
+        r'{"complex": "文字\n$\\alpha + \\beta$ \n 更多文字\n$\gamma$"}',
+        
+        # 原始有效的 JSON（不应被破坏）
+        r'{\n"valid": "转义反斜杠:\\\\, 换行:\\n, 制表:\\t"\n}'
+    ]
+
+    for i, test in enumerate(test_cases, 1):
+        print(f"测试 {i}:")
+        print(f"  输入: {test}")
+        try:
+            result = robust_backslash(test)
+            print(f"  解析: {result}")
+                
+        except Exception as e:
+            print(f"  错误: {e}")
+        print()

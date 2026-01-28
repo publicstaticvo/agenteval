@@ -56,7 +56,7 @@ class AsyncLLMClient(ABC):
             return self._availability(content, context)
         except Exception as e:
             print("LLMFunctino", type(e))
-            if isinstance(e, aiohttp.ClientResponseError) and e.status == 400: print(payload)
+            # if isinstance(e, aiohttp.ClientResponseError) and e.status == 400: print(payload)
             raise
         
     @abstractmethod

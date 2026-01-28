@@ -129,22 +129,10 @@ The input is a JSON object including a question, answer options, an answer, and 
 - Use varied question formats: causal, hypothetical, comparative, inferential, conditional, etc.
 - Maintain clarity and scientific rigor while diversifying expression.
 
-5. Reframe for Scientific Significance
-- Rewrite the question so that it emphasizes a general scientific reasoning pattern,
-  methodological assumption, or physical mechanism that could recur across multiple studies,
-  rather than being tied to a single experimental instance.
-- The question should resemble the type of reasoning a researcher would perform
-  when synthesizing insights across several papers (e.g., in a review or meta-analysis),
-  even though it remains answerable from the given context.
-- Do NOT introduce new experimental facts, external literature, or domain knowledge
-  beyond what is logically implied in the original question.
-- Preserve the original correct answer.
-
 **Important:**
 - The refined question must still admit exactly one unambiguously correct option.
 - Do NOT turn the question into an open-ended, speculative, or future-work question.
 - Do NOT ask about novelty, significance, or research directions explicitly.
-- If reframing for scientific significance risks making multiple options defensible, revert to a more conservative abstraction level.
 
 Please only output the refined QA in the following JSON format: 
 
@@ -168,6 +156,14 @@ Please only output the refined QA in the following JSON format:
 }
 ```
 """
+
+# 5. Reframe for Scientific Significance
+# - Rewrite the question so that it emphasizes a general scientific reasoning pattern, methodological assumption, or physical mechanism that could recur across multiple studies, rather than being tied to a single experimental instance.
+# - The question should resemble the type of reasoning a researcher would perform when synthesizing insights across several papers (e.g., in a review or meta-analysis), even though it remains answerable from the given context.
+# - Do NOT introduce new experimental facts, external literature, or domain knowledge beyond what is logically implied in the original question.
+# - Preserve the original correct answer.
+# - If reframing for scientific significance risks making multiple options defensible, revert to a more conservative abstraction level.
+
 # - Each refined question should challenge deep understanding of core technical concepts, appropriate for advanced graduate-level assessment.
 # - The refined question must remain solvable using information provided or generally assumed background knowledge in the domain. Avoid ambiguity or underspecified problems.
 # - Ensure that only one option is unambiguously correct.
