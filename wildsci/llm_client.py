@@ -10,7 +10,6 @@ from tenacity import (
     retry_if_exception,           # 遇到什么异常才重试
     retry_if_result,              # 返回None的时候也要重试
 )
-from abc import ABC, abstractmethod
 from config import LLMServerInfo
 from session_manager import SessionManager, RateLimit
 from prompts import *
@@ -26,9 +25,10 @@ def should_retry(exception: BaseException) -> bool:
     return True
 
 
-class AsyncLLMClient(ABC):
+class AsyncLLMClient:
 
     PROMPT: str = ""
+    SCHEMA: dict = {}
 
     def __init__(self, info: LLMServerInfo, timeout: int = 600):
         self.url = f"{info.base_url.rstrip('/')}/v1/chat/completions"
@@ -59,9 +59,10 @@ class AsyncLLMClient(ABC):
             # if isinstance(e, aiohttp.ClientResponseError) and e.status == 400: print(payload)
             raise
         
-    @abstractmethod
     def _availability(self, response, context):
-        raise NotImplementedError
+        text = extract_json(response)
+        jsonschema.validate(text, self.SCHEMA)
+        return text
     
     def _organize_inputs(self, inputs: dict):
         return [{"role": "user", "content": self.PROMPT.format(**inputs)}], {}
@@ -104,35 +105,53 @@ class Filter(AsyncLLMClient):
     def _organize_inputs(self, inputs):
         inputs = f"Question: {inputs['question']}\n\nOptions:{''.join(f'\n{k}. {inputs['options'][k]}' for k in ['A', 'B', 'C', 'D'])}"
         return [{'role': 'system', 'content': FILTER}, {'role': 'user', 'content': inputs}], {}
+    
+
+class Assumption(AsyncLLMClient):
+
+    PROMPT = ASSUMPTION
+
+    def _availability(self, response: str, context: dict):
+        response = extract_json(response)["implicit_assumptions"]
+        assert response and isinstance(response, list)
+        for x in response: assert isinstance(x, str)
+        return {**context, "assumptions": response}
+    
+    def _organize_inputs(self, inputs):
+        del inputs["explanations"]
+        prompt = [{'role': 'system', 'content': self.PROMPT}, {'role': 'user', 'content': json.dumps(inputs, indent=2)}]
+        return prompt, inputs
+    
+
+class ScientificSignificance(AsyncLLMClient):
+
+    PROMPT = SCIENTIFIC_SIGNIFICANCE
+    SCHEMA = QUESTION_SCHEMA
+    
+    def _organize_inputs(self, inputs):
+        inputs = json.dumps(inputs, indent=2)
+        return [{'role': 'system', 'content': self.PROMPT}, {'role': 'user', 'content': inputs}], {}
 
 
 class Rewrite(AsyncLLMClient):
 
     PROMPT = REVISE
-
-    def _availability(self, response: str, context: dict):
-        text = extract_json(response)
-        jsonschema.validate(text, REVISE_SCHEMA)
-        return text
+    SCHEMA = REVISE_SCHEMA
     
     def _organize_inputs(self, inputs):
         inputs = json.dumps(inputs, indent=2)
-        return [{'role': 'system', 'content': REVISE}, {'role': 'user', 'content': inputs}], {}
-    
+        return [{'role': 'system', 'content': self.PROMPT}, {'role': 'user', 'content': inputs}], {}
 
-class Tester(AsyncLLMClient):
+
+class Critic(AsyncLLMClient):
 
     OPTIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']
-    PROMPT = TEST
+    PROMPT = CRITIC
 
     def _availability(self, response: str, context: dict):
-        results = re.findall(r"\\boxed\{(?:([A-K]))\}", response)[-1]
-        # answer = ""
-        # for r in results:
-        #     r = r.lower().replace("option", "").replace("\\text{", "").replace("}", "").strip().upper()
-        #     if r in self.OPTIONS: answer = r
-        # assert answer
-        return self.model, results
+        text = extract_json(response)
+        jsonschema.validate(text, CRITIC_SCHEMA)
+        return self.model, text
     
     def _organize_inputs(self, inputs):
         assert len(inputs['options']) == 10, inputs
@@ -140,30 +159,3 @@ class Tester(AsyncLLMClient):
         inputs = f"Question: {inputs['question']}\n\nOptions:{''.join(f'\n{k}. {options[k]}' for k in self.OPTIONS)}"
         prompt = [{'role': 'system', 'content': self.PROMPT}, {'role': 'user', 'content': inputs}]
         return prompt, {}
-
-
-class ScientificSignificance(AsyncLLMClient):
-
-    PROMPT = SCIENTIFIC_SIGNIFICANCE
-
-    def _availability(self, response: str, context: dict):
-        text = extract_json(response)
-        jsonschema.validate(text, REVISE_SCHEMA)
-        return text
-    
-    def _organize_inputs(self, inputs):
-        inputs = json.dumps(inputs, indent=2)
-        return [{'role': 'system', 'content': REVISE}, {'role': 'user', 'content': inputs}], {}
-
-
-class Critic(Tester):
-
-    PROMPT = CRITIC
-
-    def _availability(self, response: str, context: dict):
-        text = extract_json(response)
-        try:
-            jsonschema.validate(text, CRITIC_SCHEMA)
-        except Exception as e:
-            print(response)
-        return self.model, text
