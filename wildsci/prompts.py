@@ -73,7 +73,7 @@ GENERATE_SCHEMA = {
   "properties": {
     "questions": {
       "type": "array",
-      "item": QUESTION_SCHEMA
+      "items": QUESTION_SCHEMA
     }
   }
 }
