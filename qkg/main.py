@@ -5,11 +5,18 @@ import asyncio, aiofiles
 from tenacity import RetryError
 from typing import Dict, List, Any, Optional
 
-from config import Config
+from config import Config, LLMServerInfo
 from search import process_paper
 from utils import skeleton_to_text
 from session_manager import SessionManager, openalex_search_paper
-from llm_client import Generate, Filter, Rewrite, Assumption, Graph, Tester
+from llm_client import Generate, Filter, Rewrite, Tester
+from llm_client import (
+    DependsFilter,
+    ImplausibleFilter,
+    RedundantFilter,
+    SelfContradictFilter,
+    WithoutFilter
+)
 
 config = Config.from_yaml("config.yaml")
 _file_lock = asyncio.Lock()
@@ -94,70 +101,73 @@ async def rewrite(generated: list[dict[str, any]]):
     return refine
 
 
-async def valid_check(generated: dict[str, any]):
-    try:
-        assumption, option_map = await Assumption(config.support_model, GREEDY_PARAMS).call(inputs=generated)
-    except Exception as e:
-        print(f"AssumtionNode {e}")
-        assumption = None
-        raise
-    if not assumption: return {"query": generated, "drop": True, "reason": "no assumptions"}
-
-    try:
-        graph = await Graph(config.support_model, GREEDY_PARAMS).call(inputs=assumption)
-    except Exception as e:
-        print(f"GraphNode {e}")
-        graph = None
-        raise
-    if not graph: return {"query": generated, "drop": True, "reason": "no graph", "assumptions": assumption, "option_map": option_map}
+async def valid_check(generated: dict[str, any], critic: LLMServerInfo):
+    async def valid(critic: LLMServerInfo):
+        try:
+            self_contradict = await SelfContradictFilter(critic, GREEDY_PARAMS).call(inputs={"question": generated['question']})
+        except RetryError as e:
+            print(f"self_contradict {e.last_attempt}")
+            self_contradict = False
+        if self_contradict: return {"drop": True, "reason": "self-contradicted"}
+        
+        try:
+            redundant = await RedundantFilter(critic, GREEDY_PARAMS).call(inputs=generated)
+        except RetryError as e:
+            print(f"redundant {e.last_attempt}")
+            redundant = False
+        if redundant: return {"drop": True, "reason": "redundant"}
+        
+        try:
+            implausible = await ImplausibleFilter(critic, GREEDY_PARAMS).call(inputs={"question": generated['question']})
+        except RetryError as e:
+            print(f"implausible {e.last_attempt}")
+            implausible = False
+        if implausible == True: return {"drop": True, "reason": "implausible"}
+        
+        independent_options = []
+        should_depends_on, good_options = {}, set()
+        for k, v in generated['options'].items():
+            try:
+                answerable = await WithoutFilter(critic, GREEDY_PARAMS).call(inputs={"options": {k: v}})
+            except RetryError as e:
+                print(f"self_contradict {e.last_attempt}")
+                answerable = "error"
+            if answerable == True: return {"drop": True, "reason": "correct without question"}
+            elif answerable == False: independent_options.append(k)
+            else: should_depends_on[k] = v
+            if len(independent_options) >= 5: 
+                return {"drop": True, "reason": "too many independent"}
+            
+        for k, v in should_depends_on.items():
+            try:
+                depends_on = await DependsFilter(critic, GREEDY_PARAMS).call(inputs={"question": generated['question'], "options": {k: v}})
+            except RetryError as e:
+                print(f"self_contradict {e.last_attempt}")    
+                depends_on = True        
+            if not depends_on: independent_options.append(k)
+            else: good_options.add(k)
+            if len(independent_options) >= 5: 
+                return {"drop": True, "reason": "too many independent"}
+        
+        answer = await Tester(c, GREEDY_PARAMS).call(inputs=generated)
+        if answer == "K":
+            return {"answer": answer, "drop": True, "reason": "K"}
+        if answer not in good_options:
+            return {"answer": answer, "drop": True, "reason": "select independent answer"}
+        return {"answer": answer, "drop": False, "independent": independent_options}
     
-    # 四部验证法
-    assignment = {k: "Self-contradict" if v['self_contradiction'] else None for k, v in graph.items()}
-    # 第一步：所有题干节点，赋值为True
-    for g in option_map['global']:
-        if assignment[g] is not None:
-            return {"query": generated, "drop": True, "reason": "self-contradicted question", "assumptions": assumption, "option_map": option_map, "graph": graph}
-        assignment[g] = "True"
-    # 第二步：所有与True互斥的节点，赋值为False
-    for g in option_map['global']:
-        for m in graph[g]['mutual_exclusivity']:
-            if assignment[m] == "True":
-                return {"query": generated, "drop": True, "reason": "mutual-exclusive question", "assumptions": assumption, "option_map": option_map, "graph": graph}
-            elif assignment[m] is None: assignment[m] = "False"
-    # 第三步：依赖False/self-contradicted的节点应为Invalid
-    changed = True
-    while changed:
-        changed = False
-        for k in graph:
-            for v in graph[k]['depends_on']:
-                if assignment[v] in ['False', 'Self-contradict', 'Invalid']:
-                    if assignment[k] == "True":
-                        return {"query": generated, "drop": True, "reason": "mutual-exclusive structure", "assumptions": assumption, "option_map": option_map, "graph": graph}
-                    elif assignment[k] is None:
-                        changed = True
-                        assignment[k] = "Invalid"
-    # 第四步：至少存在一个无False的选项
-    for k in option_map:
-        if k == "global": continue
-        for x in option_map[k]:
-            if assignment[x] in ['False', 'Self-contradict', 'Invalid']: break
-        else: break
-    else: return {"query": generated, "drop": True, "reason": "no correct options", "assumptions": assumption, "option_map": option_map, "graph": graph}
-
-    # 多模型试做
-    tasks = [asyncio.create_task(Tester(c, GREEDY_PARAMS).call(inputs=generated)) for c in config.critic_models]
+    # 多模型评价并试做
+    tasks = [asyncio.create_task(valid(c)) for c in config.critic_models]
     answers = {}
-    K_count = 0
     for task in asyncio.as_completed(tasks):
         try:
             c, result = await task
             answers[c] = result
-            if result == "K": K_count += 1
         except KeyboardInterrupt:
             raise
         except Exception as e:
             print(f"CriticNode {e}")
-    return {"query": generated, "answers": answers, "drop": K_count > 0, "assumptions": assumption, "option_map": option_map, "graph": graph} 
+    return {"query": generated, "answers": answers} 
 
 
 async def generateloop(paper: dict[str, Any]):

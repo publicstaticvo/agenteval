@@ -105,13 +105,18 @@ class Filter(AsyncLLMClient):
 
     def _availability(self, response: str, context: dict):
         response = extract_json(response)
-        return response[self.KEY]
+        result = response[self.KEY]
+        if isinstance(result, str):
+            if result.lower() == "true": result = True
+            elif result.lower() == "false": result = False
+        return result
     
     def _organize_inputs(self, inputs):
-        string = f"Question: {inputs['question']}"
-        if 'options' in inputs:
-            string = f"{string}\n\nOptions:{''.join(f'\n{k}. {inputs['options'][k]}' for k in self.OPTIONS if k in inputs['options'])}"
-        return [{'role': 'system', 'content': self.PROMPT}, {'role': 'user', 'content': inputs}], {}
+        question = f"Question: {inputs['question']}" if 'question' in inputs else ""
+        options = f"Options:{''.join(f'\n{k}. {inputs['options'][k]}' for k in self.OPTIONS if k in inputs['options'])}" if 'options' in inputs else ""
+        if question and options: string = f"{question}\n\n{options}"
+        else: string = question or options
+        return [{'role': 'system', 'content': self.PROMPT}, {'role': 'user', 'content': string}], {}
 
 
 class Rewrite(AsyncLLMClient):
@@ -124,55 +129,29 @@ class Rewrite(AsyncLLMClient):
         return [{'role': 'system', 'content': self.PROMPT}, {'role': 'user', 'content': inputs}], {}
     
 
-class Assumption(AsyncLLMClient):
+class SelfContradictFilter(Filter):
+    PROMPT = SELF_CONTRADICT
+    KEY = "self_contradictory"
 
-    PROMPT = ASSUMPTIONS
-    OPTIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
 
-    def _availability(self, response: str, context: dict):
-        response = extract_json(response)
-        assumptions, option_map = {}, {"global": [], **{k: [] for k in self.OPTIONS}}
-        for x in response['assumptions']:
-            assert x['id'] not in assumptions
-            assumptions[x['id']] = re.sub(r"\s+", " ", x['statement'])
-            option_map[x['option']].append(x['id'])
-        for x in option_map.values(): assert x
-        return assumptions, option_map
-    
-    def _organize_inputs(self, inputs):
-        inputs = f"Question: {inputs['question']}\n\nOptions:{''.join(f'\n{k}. {inputs['options'][k]}' for k in self.OPTIONS)}"
-        # inputs = json.dumps({"question": inputs['question'], "options": inputs['options']}, indent=2)
-        prompt = [{'role': 'system', 'content': self.PROMPT}, {'role': 'user', 'content': inputs}]
-        return prompt, {}
-    
+class RedundantFilter(Filter):
+    PROMPT = REDUNDANT
+    KEY = "contains_redundant_information"
 
-class Graph(AsyncLLMClient):
 
-    PROMPT = GRAPH
+class ImplausibleFilter(Filter):
+    PROMPT = IMPLAUSIBLE
+    KEY = "physically_implausible"
 
-    def _availability(self, response: str, context: dict):
-        text = extract_json(response)
-        jsonschema.validate(text, GRAPH_SCHEMA)
-        assert len(text) == len(context['inputs'])
-        tmp_to_id = {f"P{i + 1}": v[0] for i, v in enumerate(context['inputs'])}
-        graph = {}
-        for k, v in text.items():
-            v['depends_on'] = set(tmp_to_id[x] for x in v['depends_on'])
-            v['mutual_exclusivity'] = set(tmp_to_id[x] for x in v['mutual_exclusivity'])
-            assert not v['depends_on'].intersection(v['mutual_exclusivity'])
-            graph[tmp_to_id[k]] = v
-        for k, v in graph.items():
-            v['depends_on'] = list(v['depends_on'])
-            v['mutual_exclusivity'] = list(v['mutual_exclusivity'])
-        return graph
 
-    
-    def _organize_inputs(self, inputs):
-        # 定义映射，均变成P1~PN
-        inputs = list(inputs.items())
-        string = f"Assumptions: \n\n- {'\n- '.join(f'P{i + 1}: {v[1]}' for i, v in enumerate(inputs))}"
-        prompt = [{'role': 'system', 'content': self.PROMPT}, {'role': 'user', 'content': string}]
-        return prompt, {"inputs": inputs}
+class WithoutFilter(Filter):
+    PROMPT = WITHOUT_QUESTION
+    KEY = "judgment"
+
+
+class DependsFilter(Filter):
+    PROMPT = DEPENDS_ON_QUESTION
+    KEY = "depends_on_question"
 
 
 class Tester(AsyncLLMClient):

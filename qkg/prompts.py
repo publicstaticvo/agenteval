@@ -169,149 +169,91 @@ REVISE_SCHEMA = {
   "additionalProperties": False
 }
 
-ASSUMPTIONS = """You are a senior human researcher for scientific research questions. You are given a multiple-choice question with 10 options. Your task is to EXTRACT assumptions, NOT to evaluate them.
+SELF_CONTRADICT = """You are a strict scientific benchmark filter. You are given a scientific multiple-choice question stem. Your task is to judge whether the question stem itself is internally self-contradictory.
 
-IMPORTANT CONSTRAINTS:
-- You must NOT judge whether any assumption is correct, incorrect, or realistic.
-- You must NOT infer which option is correct.
-- You must NOT state or imply how many correct options exist.
-- Treat all options symmetrically and blindly.
+Definition:
+A stem is self-contradictory if it simultaneously assumes statements that cannot all be true under any reasonable scientific or theoretical interpretation.
 
-Your task consists of two parts:
+Instructions:
+- Do NOT evaluate answer options.
+- Do NOT judge realism or probability.
+- Only check whether the assumptions in the stem can logically and coherently coexist.
 
-PART 1: Global Assumptions
-- Extract assumptions that are explicitly stated or unavoidably implied by the QUESTION STEM.
-- These assumptions must be common to ALL options.
-- Do NOT introduce background knowledge.
-- Do NOT include assumptions that are specific to a particular option.
-
-PART 2: Option-Specific Assumptions
-- For EACH option, list additional assumptions that would need to hold for THAT OPTION to be true.
-- These assumptions must be logically attributable to that specific option.
-- Each assumption must clearly indicate which option it comes from.
-
-Guidelines:
-- If an option can be validated using only the global assumptions, output an empty list for that option.
-- Do not merge assumptions across options, even if they sound similar.
-- Use short, explicit, declarative statements.
-
-Output only the following JSON structure:
-
-```json
+Output format:
 {
-  "assumptions": [
-    {
-      "id": "P1",
-      "option": "global",
-      "statement": "..."
-    },
-    {
-      "id": "P2",
-      "option": "global",
-      "statement": "..."
-    },
-    {
-      "id": "A1",
-      "option": "A",
-      "statement": "..."
-    },
-    {
-      "id": "B1",
-      "option": "B",
-      "statement": "..."
-    }
-  ]
+  "self_contradictory": true | false,
+  "reason": "brief explanation"
 }
-```
 """
 
-ASSUMPTION_SCHEMA = {
-  "type": "object",
-  "required": ["global_assumptions", "option_assumptions"],
-  "properties": {
-    "global_assumptions": {"type": "array", "items": {
-      "type": "object",
-      "required": ['id', 'statement'],
-      "properties": {
-        "id": {"type": "string", "minLength": 1},
-        "statement": {"type": "string", "minLength": 1}
-      },
-      "additionalProperties": False
-    }},
-    "option_assumptions": {
-      "type": "object",
-      "required": ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'],
-      "properties": {
-        k: {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ['id', 'statement'],
-            "properties": {
-              "id": {"type": "string", "minLength": 1},
-              "statement": {"type": "string", "minLength": 1}
-            },
-            "additionalProperties": False
-          }
-        } 
-        for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
-      },
-      "additionalProperties": False
-    }
-  },
-  "additionalProperties": False
-}
+REDUNDANT = """You are a strict scientific benchmark filter. You are given a scientific multiple-choice question. Your task is to judge whether the question stem contains information that:
+- Is not required to determine the correct answer, AND
+- Does not meaningfully function as a distractor for any option.
 
-GRAPH = """You are a senior human researcher acting as a meta-critic for scientific research questions. You are given a list of assumptions extracted from a multiple-choice question. Your task is to construct a STRUCTURAL ASSUMPTION GRAPH. Do NOT evaluate whether any assumption is true or false.
+Instructions:
+- Do NOT assume perfect exam design.
+- Only flag information that is clearly irrelevant to all options.
+- If unsure, answer "no".
 
-For EACH assumption, determine:
-
-1. depends_on:
-   - List other assumptions that must hold for this assumption to be meaningful.
-   - If those assumptions fail, this assumption becomes ill-defined or meaningless.
-
-2. mutual_exclusivity:
-   - List assumptions that cannot be true at the same time as this one.
-
-3. self_contradiction:
-   - Set to true ONLY if the assumption contradicts itself internally.
-
-IMPORTANT:
-- Do NOT infer scientific correctness.
-- Do NOT remove assumptions.
-- Do NOT introduce new assumptions.
-
-Output a JSON object where each key is an assumption ID:
-
-```json
+Output format:
 {
-  "P1": {
-    "depends_on": [],
-    "mutual_exclusivity": [],
-    "self_contradiction": false
-  },
-  "P2": {
-    "depends_on": ["P1"],
-    "mutual_exclusivity": ["P3"],
-    "self_contradiction": false
-  },
-  ...
+  "contains_redundant_information": true | false,
+  "reason": "brief explanation"
 }
-```
 """
 
-GRAPH_SCHEMA = {
-  "type": "object",
-  "additionalProperties": {
-    "type": "object",
-    "required": ['depends_on', 'mutual_exclusivity', 'self_contradiction'],
-    "properties": {
-      "depends_on": {"type": "array", "items": {"type": "string", "minLength": 1}},
-      "mutual_exclusivity": {"type": "array", "items": {"type": "string", "minLength": 1}},
-      "self_contradiction": {"type": "boolean"}
-    }
-  }
+IMPLAUSIBLE = """You are a strict scientific benchmark filter. You are given a scientific question. Your task is to judge whether the combination of assumptions described in the question is considered:
+- Extremely atypical, or
+- Violating well-established physical or scientific principles.
+
+Instructions:
+- Judge the combination of assumptions, not individual statements.
+- Do NOT require absolute impossibility; extreme implausibility is sufficient.
+- Ignore purely hypothetical or philosophical framing.
+
+Output format:
+{
+  "physically_implausible": true | false,
+  "reason": "brief explanation"
 }
+"""
+
+CANONICAL = """You are an expert on material science. You are given an answer option from a scientific multiple-choice question. Rewrite the option into a canonical form that:
+- States only the core claim being asserted
+- Removes rhetorical phrasing, examples, and hedging
+- Does NOT add assumptions from the question stem
+
+Output format:
+{
+  "canonical_statement": "one concise declarative sentence"
+}
+"""
+
+WITHOUT_QUESTION = """You are an expert on material science. You are given an answer option WITHOUT the question. Your task is to judge whether the truth value of this statement can be determined based solely on general scientific knowledge or common facts.
+
+Instructions:
+- Assume no additional context.
+- If the statement clearly requires missing conditions or context, answer "cannot_determine".
+
+Output format:
+{
+  "judgment": "true" | "false" | "cannot_determine",
+  "reason": "brief explanation"
+}
+"""
+
+DEPENDS_ON_QUESTION = """You are an expert on material science. You are given a question and an answer option. Your task is to judge whether evaluating this option requires information provided in the question.
+
+Instructions:
+- If the option can be judged without referencing the question, answer "no".
+- If any part of the question is necessary, answer "yes".
+
+Output format:
+{
+  "depends_on_question": "yes" | "no",
+  "reason": "brief explanation"
+}
+"""
 
 TEST = """You are an expert on material science. You are asked to answer the following multiple-choice question.
 
