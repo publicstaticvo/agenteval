@@ -82,6 +82,7 @@ class Generate(AsyncLLMClient):
 
     def _availability(self, response: str, context: dict):
         text = extract_json(response)
+        assert text, response
         jsonschema.validate(text, GENERATE_SCHEMA)
         questions = []
         # 预过滤
@@ -162,7 +163,7 @@ class Tester(AsyncLLMClient):
     def _availability(self, response: str, context: dict):
         text = extract_json(response)
         jsonschema.validate(text, TEST_SCHEMA)
-        return self.model, text['selected_answer']
+        return text['selected_answer']
     
     def _organize_inputs(self, inputs):
         assert len(inputs['options']) == 10, inputs

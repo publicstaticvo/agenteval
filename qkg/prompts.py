@@ -1,34 +1,43 @@
-GENERATE = """You are an expert research scientist in materials science. Your task is to identify and formulate THREE multiple-choice questions that are already implicitly or explicitly answered by the provided academic paper. These questions must reflect the kinds of scientific questions that the paper itself resolves, clarifies, or settles through its experiments, analysis, or arguments.
+GENERATE = """You are an expert research scientist in materials science.
+
+Your task is to generate THREE multiple-choice questions that are implicitly or explicitly resolved by the provided academic paper. Each question must reflect a specific scientific judgment that becomes decidable ONLY under the concrete conditions stated in the question stem.
+
+CRITICAL DESIGN OBJECTIVE:
+The correct answer MUST rely on at least one explicit condition described in the question.
+If the question were removed or generalized, the correct answer should no longer be obviously true.
 
 Each question must satisfy ALL of the following:
 
-1. Question construction:
-- The question must be answerable based on the scientific reasoning or evidence presented in the paper.
-- The question should reflect a real scientific uncertainty that the paper addresses (e.g., mechanism identification, interpretation choice, validity of an assumption).
-- The question must be understandable on its own, without referring to the paper text.
-- Provide sufficient background context in the question so that the problem is well-posed.
+1. Question construction
+- The question must be answerable using the reasoning, evidence, or interpretation presented in the paper.
+- The question must include at least one explicit condition, regime, comparison, or configuration (e.g., material pairing, bias polarity, interface structure, measurement context).
+- Removing or altering this condition should make the answer ambiguous or debatable.
+- The question must be understandable on its own and must NOT reference the paper, figures, or sections.
 
-2. Options:
+2. Prohibited question styles
+- Do NOT ask purely canonical or textbook-style questions.
+- Avoid questions phrased as “What is the primary reason/mechanism for X?” unless the mechanism is valid ONLY under the stated conditions.
+- Do NOT ask questions whose correct answer would remain true in most closely related systems.
+
+3. Options
 - Provide exactly FOUR answer options (A–D).
-- Exactly one option must be correct.
-- Incorrect options should correspond to realistic alternative interpretations, mechanisms, or assumptions that a researcher might reasonably consider.
+- Exactly ONE option must be correct.
+- Incorrect options must correspond to realistic alternative interpretations that would require additional assumptions NOT guaranteed by the stem.
+- No option may be correct without explicitly using information from the question stem.
 
-3. Answer:
-- Indicate the correct option letter.
+4. Answer & Explanation
+- Clearly indicate the correct option letter.
+- Explain why the correct option follows specifically from the stated conditions.
+- Explain why the other options fail when those same conditions are applied.
+- Do NOT explain answers by appealing to general textbook knowledge alone.
 
-4. Explanation:
-- Explain why the correct option follows from the stated assumptions and reasoning.
-- Explain why the other options fail under the same assumptions.
-- Do NOT reference the paper, figures, or sections explicitly.
-
-Important constraints:
+Important constraints
 - Do NOT artificially increase difficulty.
-- Do NOT require multi-step derivations unless they are intrinsic to the scientific reasoning.
-- Avoid exam-style tricks or contrived logic.
+- Do NOT introduce rare, pathological, or contrived scenarios.
+- Keep reasoning depth shallow: each option should hinge on at most ONE unstated assumption.
 
 Output ONLY in the following JSON format:
 
-```json
 {
   "questions": [
     {
@@ -44,7 +53,6 @@ Output ONLY in the following JSON format:
     }
   ]
 }
-```
 """
 
 QUESTION_SCHEMA = {
@@ -98,43 +106,40 @@ Output ONLY in JSON format:
 ```
 """
 
-REVISE = """You are an expert scientific question designer. You are given a well-formed multiple-choice question with 4 options and a single correct answer. Your task is to rewrite the question so that it has EXACTLY 10 answer options (A–J), while remaining a SINGLE-ANSWER multiple-choice question.
+REVISE = """You are an expert scientific question designer. You are given a well-formed multiple-choice question with 4 options and a single correct answer. Your task is to rewrite the question so that it has EXACTLY TEN answer options (A–J), while remaining a SINGLE-ANSWER multiple-choice question.
 
 PRIMARY OBJECTIVE:
-Maximize the likelihood that the rewritten question passes subsequent structural assumption checks.
+Increase option diversity while minimizing redundancy, independent correctness, and question-irrelevant answer options.
 
 STRICT CONSTRAINTS:
 
 1. Preserve the Core Question
-- Do NOT change the question stem.
 - Do NOT change what is being asked.
-- Do NOT introduce new physical mechanisms, effects, materials, or experimental paradigms.
+- Do NOT introduce new physical mechanisms, materials, or experimental paradigms.
 
-2. Option Construction Principles
-- All 10 options must be plausible under SOME explicit or implicit assumptions.
-- The correct option must remain correct for the SAME underlying reason as in the original question.
-- Each incorrect option should be wrong because it relies on an additional assumption that is NOT guaranteed by the question stem.
+2. Correct Option
+- The correct option must remain correct for the SAME reason.
+- It must require at least one explicit condition from the question stem to be true.
 
-3. How to Generate Additional Options (from 4 to 10)
-You may create new options by:
-- Restricting applicability to a special regime or condition
-- Extending a claim beyond its justified scope
-- Assuming idealized or limiting cases
-- Assuming the absence or presence of a secondary effect already mentioned in the question
+3. Incorrect Options — Structured Generation
+When expanding from 4 to 10 options, follow this distribution:
+- At least FOUR options must explicitly reference a condition or regime stated in the question stem.
+- At most TWO options may invoke general mechanisms without question-specific qualifiers.
+- At most ONE option may involve idealized or limiting-case assumptions.
 
-Do NOT create options by:
-- Introducing new variables not mentioned or implied
-- Violating basic physical or logical consistency
-- Relying on extremely rare, pathological, or contrived scenarios
+4. Prohibited Patterns
+- Do NOT create paraphrases or near-synonyms.
+- Do NOT include both a mechanism and its direct consequence as separate options.
+- Do NOT include options that would be correct in most similar systems.
 
-4. Reasoning Depth Control
-- Do NOT force long or multi-branch reasoning chains.
-- Each option should be assessable by checking whether its required assumptions are supported by the question stem.
-- Avoid chaining more than one additional assumption per option.
+5. Reasoning Depth Control
+- Each option must hinge on exactly ONE unstated assumption.
+- Avoid multi-branch or conditional reasoning.
 
-5. Scientific Significance (Light Touch Only)
-- You MAY phrase options in a way that reflects interpretation or judgment (e.g., “can be reasonably attributed to…”).
-- Do NOT explicitly discuss novelty, research directions, or field-wide implications.
+6. Redundancy Check (Self-check)
+Before finalizing:
+- Verify that removing any single option does NOT leave another option that says the same thing.
+- Verify that no option is obviously true or false without using the question stem.
 
 OUTPUT FORMAT (JSON ONLY):
 
@@ -143,13 +148,18 @@ OUTPUT FORMAT (JSON ONLY):
   "options": {
     "A": "...",
     "B": "...",
-    ...
+    "C": "...",
+    "D": "...",
+    "E": "...",
+    "F": "...",
+    "G": "...",
+    "H": "...",
+    "I": "...",
     "J": "..."
-  }
+  },
   "answer": "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J",
   "explanations": "..."
 }
-
 """
 
 REVISE_SCHEMA = {

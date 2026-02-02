@@ -11,9 +11,10 @@
 .ipynb_checkpoints
 .langgraph_api
 __pycache__
-samplepaper
 prev_projects
+samplepaper
 generated
+workflows
 queries
 inputs
 papers

@@ -101,7 +101,7 @@ async def rewrite(generated: list[dict[str, any]]):
     return refine
 
 
-async def valid_check(generated: dict[str, any], critic: LLMServerInfo):
+async def valid_check(generated: dict[str, any]):
     async def valid(critic: LLMServerInfo):
         try:
             self_contradict = await SelfContradictFilter(critic, GREEDY_PARAMS).call(inputs={"question": generated['question']})
@@ -159,10 +159,10 @@ async def valid_check(generated: dict[str, any], critic: LLMServerInfo):
     # 多模型评价并试做
     tasks = [asyncio.create_task(valid(c)) for c in config.critic_models]
     answers = {}
-    for task in asyncio.as_completed(tasks):
+    for c, task in zip(config.critic_models, asyncio.as_completed(tasks)):
         try:
-            c, result = await task
-            answers[c] = result
+            result = await task
+            answers[c.model] = result
         except KeyboardInterrupt:
             raise
         except Exception as e:
@@ -186,6 +186,13 @@ async def generateloop(paper: dict[str, Any]):
     refine = await rewrite(filtered_generated)
     print(f"paper {paper['id']} get {len(refine)} refined problems")
     if not refine: return
+
+    async with _file_lock:
+        async with aiofiles.open("temp.jsonl", "a+", encoding='utf-8') as f:
+            for result in refine:
+                result['paper_id'] = paper['id']
+                result['title'] = paper['title']
+                await f.write(json.dumps(result, ensure_ascii=False) + "\n")
 
     # valid_check + Critic
     tasks = [asyncio.create_task(valid_check(g)) for g in refine]
@@ -211,6 +218,7 @@ async def generateloop(paper: dict[str, Any]):
 async def gen():
     try:
         await SessionManager.init()
+        if os.path.exists("temp.jsonl"): os.remove("temp.jsonl")
         if os.path.exists(config.workflow_output): os.remove(config.workflow_output)
         tasks = []
         for i, n in enumerate(glob.glob(f"{config.input_file}/*.json")):
@@ -227,7 +235,7 @@ async def debug_test():
         await SessionManager.init()
         if os.path.exists(config.workflow_output): os.remove(config.workflow_output)
         tasks = []
-        with open("temp.jsonl") as f:
+        with open("temp.jsonl", encoding='utf-8') as f:
             for x in f:
                 if x.strip():
                     x = json.loads(x.strip())
@@ -236,11 +244,10 @@ async def debug_test():
             try:
                 result = await task
                 if not isinstance(result, dict): continue
-                with open(config.workflow_output, 'a+') as f: 
+                with open(config.workflow_output, 'a+', encoding='utf-8') as f: 
                     f.write(json.dumps(result, ensure_ascii=False) + "\n")
             except Exception as e:
                 print(e, type(e))
-                pass
     except asyncio.CancelledError:
         pass
     except RetryError as e:
@@ -260,4 +267,4 @@ async def search():
 
 
 if __name__ == "__main__":
-    asyncio.run(debug_test())
+    asyncio.run(gen())

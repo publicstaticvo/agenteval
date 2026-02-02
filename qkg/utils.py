@@ -100,7 +100,7 @@ def extract_json(text: str) -> dict:
         return {}
     
     try:
-        candidate = text[start:end+1].replace("'", '"')
+        candidate = text[start:end+1]  # .replace("'", '"')
         candidate = re.sub(r",\s*([}\]])", r"\1", candidate)
         return json.loads(candidate)
     except Exception:
