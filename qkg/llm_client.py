@@ -105,8 +105,12 @@ class Filter(AsyncLLMClient):
     OPTIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
 
     def _availability(self, response: str, context: dict):
-        response = extract_json(response)
-        result = response[self.KEY]
+        text = extract_json(response)
+        try:
+            result = text[self.KEY]
+        except KeyError:
+            print(response, text)
+            raise
         if isinstance(result, str):
             if result.lower() == "true": result = True
             elif result.lower() == "false": result = False

@@ -267,4 +267,4 @@ async def search():
 
 
 if __name__ == "__main__":
-    asyncio.run(gen())
+    asyncio.run(debug_test())

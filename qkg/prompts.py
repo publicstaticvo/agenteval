@@ -1,43 +1,39 @@
-GENERATE = """You are an expert research scientist in materials science.
+GENERATE = """You are an expert research scientist in materials science. Your task is to generate THREE multiple-choice questions that can be answered using ONLY the information explicitly stated or logically implied in the question itself.
 
-Your task is to generate THREE multiple-choice questions that are implicitly or explicitly resolved by the provided academic paper. Each question must reflect a specific scientific judgment that becomes decidable ONLY under the concrete conditions stated in the question stem.
-
-CRITICAL DESIGN OBJECTIVE:
-The correct answer MUST rely on at least one explicit condition described in the question.
-If the question were removed or generalized, the correct answer should no longer be obviously true.
+CRITICAL REQUIREMENT:
+A well-trained scientist should be able to eliminate all incorrect options by carefully reading the question alone, WITHOUT needing to recall specific data, figures, or unstated results from the paper.
 
 Each question must satisfy ALL of the following:
 
 1. Question construction
-- The question must be answerable using the reasoning, evidence, or interpretation presented in the paper.
-- The question must include at least one explicit condition, regime, comparison, or configuration (e.g., material pairing, bias polarity, interface structure, measurement context).
-- Removing or altering this condition should make the answer ambiguous or debatable.
-- The question must be understandable on its own and must NOT reference the paper, figures, or sections.
+- The question must include concrete, checkable conditions (e.g., material pairing, bias polarity, contact asymmetry, measurement outcome).
+- These conditions must directly rule out incorrect options.
+- Do NOT include vague qualifiers such as “high-quality”, “as observed”, “in experiments”, or “as reported”.
+- The question must not rely on hidden facts that only appear in the paper.
 
-2. Prohibited question styles
-- Do NOT ask purely canonical or textbook-style questions.
-- Avoid questions phrased as “What is the primary reason/mechanism for X?” unless the mechanism is valid ONLY under the stated conditions.
-- Do NOT ask questions whose correct answer would remain true in most closely related systems.
+2. What the question may test
+- Causal exclusion: which explanations are incompatible with the stated conditions?
+- Conditional reasoning: which mechanism works ONLY under the given configuration?
+- Logical consistency: which interpretation does NOT introduce extra assumptions?
 
-3. Options
+3. Prohibited question styles
+- Do NOT ask “What is the primary reason/mechanism for X?” unless competing mechanisms are explicitly constrained by the question.
+- Do NOT ask questions whose answer depends on numerical values, band diagrams, or material parameters not stated.
+- Do NOT test recall of canonical facts.
+
+4. Options
 - Provide exactly FOUR answer options (A–D).
 - Exactly ONE option must be correct.
-- Incorrect options must correspond to realistic alternative interpretations that would require additional assumptions NOT guaranteed by the stem.
-- No option may be correct without explicitly using information from the question stem.
+- Each incorrect option must fail because it assumes something NOT stated in the question.
+- No option may be correct in the absence of the question stem.
 
-4. Answer & Explanation
-- Clearly indicate the correct option letter.
-- Explain why the correct option follows specifically from the stated conditions.
-- Explain why the other options fail when those same conditions are applied.
-- Do NOT explain answers by appealing to general textbook knowledge alone.
-
-Important constraints
-- Do NOT artificially increase difficulty.
-- Do NOT introduce rare, pathological, or contrived scenarios.
-- Keep reasoning depth shallow: each option should hinge on at most ONE unstated assumption.
+5. Answer & Explanation
+- Explain why the correct option follows directly from the question conditions.
+- Explain why each incorrect option requires an additional unsupported assumption.
+- Do NOT reference the paper, experiments, or prior literature.
 
 Output ONLY in the following JSON format:
-
+```json
 {
   "questions": [
     {
@@ -53,6 +49,7 @@ Output ONLY in the following JSON format:
     }
   ]
 }
+```
 """
 
 QUESTION_SCHEMA = {
@@ -142,7 +139,7 @@ Before finalizing:
 - Verify that no option is obviously true or false without using the question stem.
 
 OUTPUT FORMAT (JSON ONLY):
-
+```json
 {
   "question": "...",
   "options": {
@@ -160,6 +157,7 @@ OUTPUT FORMAT (JSON ONLY):
   "answer": "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J",
   "explanations": "..."
 }
+```
 """
 
 REVISE_SCHEMA = {
@@ -190,10 +188,12 @@ Instructions:
 - Only check whether the assumptions in the stem can logically and coherently coexist.
 
 Output format:
+```json
 {
   "self_contradictory": true | false,
   "reason": "brief explanation"
 }
+```
 """
 
 REDUNDANT = """You are a strict scientific benchmark filter. You are given a scientific multiple-choice question. Your task is to judge whether the question stem contains information that:
@@ -206,10 +206,12 @@ Instructions:
 - If unsure, answer "no".
 
 Output format:
+```json
 {
   "contains_redundant_information": true | false,
   "reason": "brief explanation"
 }
+```
 """
 
 IMPLAUSIBLE = """You are a strict scientific benchmark filter. You are given a scientific question. Your task is to judge whether the combination of assumptions described in the question is considered:
@@ -222,10 +224,12 @@ Instructions:
 - Ignore purely hypothetical or philosophical framing.
 
 Output format:
+```json
 {
   "physically_implausible": true | false,
   "reason": "brief explanation"
 }
+```
 """
 
 CANONICAL = """You are an expert on material science. You are given an answer option from a scientific multiple-choice question. Rewrite the option into a canonical form that:
@@ -234,9 +238,11 @@ CANONICAL = """You are an expert on material science. You are given an answer op
 - Does NOT add assumptions from the question stem
 
 Output format:
+```json
 {
   "canonical_statement": "one concise declarative sentence"
 }
+```
 """
 
 WITHOUT_QUESTION = """You are an expert on material science. You are given an answer option WITHOUT the question. Your task is to judge whether the truth value of this statement can be determined based solely on general scientific knowledge or common facts.
@@ -246,10 +252,12 @@ Instructions:
 - If the statement clearly requires missing conditions or context, answer "cannot_determine".
 
 Output format:
+```json
 {
   "judgment": "true" | "false" | "cannot_determine",
   "reason": "brief explanation"
 }
+```
 """
 
 DEPENDS_ON_QUESTION = """You are an expert on material science. You are given a question and an answer option. Your task is to judge whether evaluating this option requires information provided in the question.
@@ -259,10 +267,12 @@ Instructions:
 - If any part of the question is necessary, answer "yes".
 
 Output format:
+```json
 {
   "depends_on_question": "yes" | "no",
   "reason": "brief explanation"
 }
+```
 """
 
 TEST = """You are an expert on material science. You are asked to answer the following multiple-choice question.
