@@ -11,11 +11,10 @@ from utils import skeleton_to_text
 from session_manager import SessionManager, openalex_search_paper
 from llm_client import Generate, Filter, Rewrite, Tester
 from llm_client import (
-    DependsFilter,
     ImplausibleFilter,
     RedundantFilter,
     SelfContradictFilter,
-    WithoutFilter
+    JointOptionFilter
 )
 
 config = Config.from_yaml("config.yaml")
@@ -124,37 +123,32 @@ async def valid_check(generated: dict[str, any]):
             implausible = False
         if implausible == True: return {"drop": True, "reason": "implausible"}
         
-        independent_options = []
-        should_depends_on, good_options = {}, set()
-        for k, v in generated['options'].items():
-            try:
-                answerable = await WithoutFilter(critic, GREEDY_PARAMS).call(inputs={"options": {k: v}})
-            except RetryError as e:
-                print(f"self_contradict {e.last_attempt}")
-                answerable = "error"
-            if answerable == True: return {"drop": True, "reason": "correct without question"}
-            elif answerable == False: independent_options.append(k)
-            else: should_depends_on[k] = v
-            if len(independent_options) >= 5: 
+        try:
+            option_check = await JointOptionFilter(critic, GREEDY_PARAMS).call(inputs=generated)
+            if option_check["trivially_true_without_question"]:
+                return {"drop": True, "reason": "correct without question"}
+            does_not_depend = set(option_check["trivially_false_without_question"] + option_check["does_not_depend_on_question"])
+            if len(does_not_depend) >= 4:
                 return {"drop": True, "reason": "too many independent"}
-            
-        for k, v in should_depends_on.items():
-            try:
-                depends_on = await DependsFilter(critic, GREEDY_PARAMS).call(inputs={"question": generated['question'], "options": {k: v}})
-            except RetryError as e:
-                print(f"self_contradict {e.last_attempt}")    
-                depends_on = True        
-            if not depends_on: independent_options.append(k)
-            else: good_options.add(k)
-            if len(independent_options) >= 5: 
-                return {"drop": True, "reason": "too many independent"}
+            redundant_options = set()
+            for x in option_check["redundant_options"]: redundant_options.update(x)
+        except RetryError as e:
+            print(f"joint option filter {e.last_attempt}")
+            return {"drop": True, "reason": "joint option filter error"}
         
-        answer = await Tester(c, GREEDY_PARAMS).call(inputs=generated)
-        if answer == "K":
-            return {"answer": answer, "drop": True, "reason": "K"}
-        if answer not in good_options:
-            return {"answer": answer, "drop": True, "reason": "select independent answer"}
-        return {"answer": answer, "drop": False, "independent": independent_options}
+        # The final check
+        try:
+            answer = await Tester(critic, GREEDY_PARAMS).call(inputs=generated)
+            if answer == "K":
+                return {"answer": answer, "drop": True, "reason": "K"}
+            if answer in does_not_depend:
+                return {"answer": answer, "drop": True, "reason": "select independent answer"}
+            if answer in redundant_options:
+                return {"answer": answer, "drop": True, "reason": "multiple correct answers"}
+        except RetryError as e:
+            print(f"tester {e.last_attempt}")
+            answer = "Error"
+        return {"answer": answer, "drop": False, "independent": list(does_not_depend)}
     
     # 多模型评价并试做
     tasks = [asyncio.create_task(valid(c)) for c in config.critic_models]

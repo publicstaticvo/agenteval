@@ -245,35 +245,75 @@ Output format:
 ```
 """
 
-WITHOUT_QUESTION = """You are an expert on material science. You are given an answer option WITHOUT the question. Your task is to judge whether the truth value of this statement can be determined based solely on general scientific knowledge or common facts.
+OPTION_CHECK = """You are a strict scientific benchmark filter. You are reviewing a multiple-choice question for quality control. Your task is to identify structural issues that can be judged WITHOUT solving the problem.
+
+Given the question and options below, analyze them under the following rules:
+
+Definitions:
+- "Trivially true without the question" means the option is obviously correct based on general knowledge alone.
+- "Trivially false without the question" means the option is obviously incorrect or nonsensical based on general knowledge alone.
+- "Does not depend on the question" means the option makes a standalone claim so that a knowledgeable reader can decide whether the option is true or false even if the question context is removed.
+- "Semantically redundant options" are options that express essentially the same idea or mechanism, even if worded differently.
 
 Instructions:
-- Assume no additional context.
-- If the statement clearly requires missing conditions or context, answer "cannot_determine".
+- Do NOT judge which option is correct given the question.
+- Do NOT use information outside the text unless it is general domain knowledge.
+- Be conservative: only label cases that are clear and unambiguous.
 
-Output format:
+Output a JSON object with the following fields:
 ```json
 {
-  "judgment": "true" | "false" | "cannot_determine",
-  "reason": "brief explanation"
+  "trivially_true_without_question": <list of option letters>,
+  "trivially_false_without_question": <list of option letters>,
+  "does_not_depend_on_question": <list of option letters>,
+  "redundant_options": <list of lists of option letters>
 }
 ```
 """
 
-DEPENDS_ON_QUESTION = """You are an expert on material science. You are given a question and an answer option. Your task is to judge whether evaluating this option requires information provided in the question.
-
-Instructions:
-- If the option can be judged without referencing the question, answer "no".
-- If any part of the question is necessary, answer "yes".
-
-Output format:
-```json
-{
-  "depends_on_question": "yes" | "no",
-  "reason": "brief explanation"
+OPTION_SCHEMA = {
+    "type": "object", 
+    "required": [
+        "trivially_true_without_question",
+        "trivially_false_without_question",
+        "does_not_depend_on_question",
+        "redundant_options"
+    ],
+    "properties": {
+        "trivially_true_without_question": {
+            "type": "array",
+            "items": {
+                "type": "string", 
+                "enum": ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
+            }
+        },
+        "trivially_false_without_question": {
+            "type": "array",
+            "items": {
+                "type": "string", 
+                "enum": ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
+            }
+        },
+        "does_not_depend_on_question": {
+            "type": "array",
+            "items": {
+                "type": "string", 
+                "enum": ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
+            }
+        },
+        "redundant_options": {
+            "type": "array",
+            "items": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                    "type": "string",
+                    "enum": ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
+                }
+            }
+        }    
+    }
 }
-```
-"""
 
 TEST = """You are an expert on material science. You are asked to answer the following multiple-choice question.
 

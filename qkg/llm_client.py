@@ -149,14 +149,13 @@ class ImplausibleFilter(Filter):
     KEY = "physically_implausible"
 
 
-class WithoutFilter(Filter):
-    PROMPT = WITHOUT_QUESTION
-    KEY = "judgment"
-
-
-class DependsFilter(Filter):
-    PROMPT = DEPENDS_ON_QUESTION
-    KEY = "depends_on_question"
+class JointOptionFilter(Filter):
+    PROMPT = OPTION_CHECK
+    
+    def _availability(self, response: str, context: dict):
+        response = extract_json(response)
+        jsonschema.validate(response, OPTION_SCHEMA)
+        return response
 
 
 class Tester(AsyncLLMClient):
