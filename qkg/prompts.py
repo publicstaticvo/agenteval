@@ -1,24 +1,27 @@
-GENERATE = """You are an expert research scientist in materials science. Your task is to generate THREE multiple-choice questions that can be answered using ONLY the information explicitly stated or logically implied in the question itself.
+from config import Config
+config = Config.from_yaml("config.yaml")
+
+GENERATE = f"""You are an expert research scientist in {config.subject}. Your task is to generate THREE multiple-choice questions that can be answered using ONLY the information explicitly stated or logically implied in the question itself.
 
 CRITICAL REQUIREMENT:
-A well-trained scientist should be able to eliminate all incorrect options by carefully reading the question alone, WITHOUT needing to recall specific data, figures, or unstated results from the paper.
+A well-trained scientist should be able to eliminate all incorrect options by carefully reading the question alone, WITHOUT needing to recall domain-specific facts, data, or unstated results.
 
 Each question must satisfy ALL of the following:
 
 1. Question construction
-- The question must include concrete, checkable conditions (e.g., material pairing, bias polarity, contact asymmetry, measurement outcome).
+- The question must include concrete, checkable conditions.
 - These conditions must directly rule out incorrect options.
-- Do NOT include vague qualifiers such as “high-quality”, “as observed”, “in experiments”, or “as reported”.
-- The question must not rely on hidden facts that only appear in the paper.
+- Do NOT include vague qualifiers such as “high-quality”, “as observed”, or “in practice”.
+- The question must not rely on hidden facts that are not stated in the question.
 
 2. What the question may test
 - Causal exclusion: which explanations are incompatible with the stated conditions?
-- Conditional reasoning: which mechanism works ONLY under the given configuration?
+- Conditional reasoning: which mechanism or principle works ONLY under the given configuration?
 - Logical consistency: which interpretation does NOT introduce extra assumptions?
 
 3. Prohibited question styles
 - Do NOT ask “What is the primary reason/mechanism for X?” unless competing mechanisms are explicitly constrained by the question.
-- Do NOT ask questions whose answer depends on numerical values, band diagrams, or material parameters not stated.
+- Do NOT ask questions whose answer depends on numerical values or domain-specific data not stated.
 - Do NOT test recall of canonical facts.
 
 4. Options
@@ -30,25 +33,25 @@ Each question must satisfy ALL of the following:
 5. Answer & Explanation
 - Explain why the correct option follows directly from the question conditions.
 - Explain why each incorrect option requires an additional unsupported assumption.
-- Do NOT reference the paper, experiments, or prior literature.
+- Do NOT reference prior literature, experiments, or domain-specific studies.
 
 Output ONLY in the following JSON format:
 ```json
-{
+{{
   "questions": [
-    {
+    {{
       "question": "...",
-      "options": {
+      "options": {{
         "A": "...",
         "B": "...",
         "C": "...",
         "D": "..."
-      },
+      }},
       "answer": "A" | "B" | "C" | "D",
       "explanations": "..."
-    }
+    }}
   ]
-}
+}}
 ```
 """
 
@@ -112,7 +115,7 @@ STRICT CONSTRAINTS:
 
 1. Preserve the Core Question
 - Do NOT change what is being asked.
-- Do NOT introduce new physical mechanisms, materials, or experimental paradigms.
+- Do NOT introduce new domain-specific mechanisms, contexts, or experimental paradigms.
 
 2. Correct Option
 - The correct option must remain correct for the SAME reason.
@@ -120,14 +123,14 @@ STRICT CONSTRAINTS:
 
 3. Incorrect Options — Structured Generation
 When expanding from 4 to 10 options, follow this distribution:
-- At least FOUR options must explicitly reference a condition or regime stated in the question stem.
+- At least FOUR options must explicitly reference a condition or constraint stated in the question stem.
 - At most TWO options may invoke general mechanisms without question-specific qualifiers.
 - At most ONE option may involve idealized or limiting-case assumptions.
 
 4. Prohibited Patterns
 - Do NOT create paraphrases or near-synonyms.
 - Do NOT include both a mechanism and its direct consequence as separate options.
-- Do NOT include options that would be correct in most similar systems.
+- Do NOT include options that would be correct in most similar systems without the stated conditions.
 
 5. Reasoning Depth Control
 - Each option must hinge on exactly ONE unstated assumption.
@@ -232,16 +235,16 @@ Output format:
 ```
 """
 
-CANONICAL = """You are an expert on material science. You are given an answer option from a scientific multiple-choice question. Rewrite the option into a canonical form that:
+CANONICAL = f"""You are an expert on {config.subject}. You are given an answer option from a scientific multiple-choice question. Rewrite the option into a canonical form that:
 - States only the core claim being asserted
 - Removes rhetorical phrasing, examples, and hedging
 - Does NOT add assumptions from the question stem
 
 Output format:
 ```json
-{
+{{
   "canonical_statement": "one concise declarative sentence"
-}
+}}
 ```
 """
 
@@ -315,7 +318,7 @@ OPTION_SCHEMA = {
     }
 }
 
-TEST = """You are an expert on material science. You are asked to answer the following multiple-choice question.
+TEST = f"""You are an expert on {config.subject}. You are asked to answer the following multiple-choice question.
 
 If you determine that:
 - the assumptions are internally contradictory,
@@ -329,7 +332,7 @@ Otherwise, select the single best answer.
 Do NOT explain your reasoning. Output only the selected option letter, in the following JSON format:
 
 ```json
-{ "selected_answer": "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" }
+{{ "selected_answer": "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" }}
 ```
 """
 

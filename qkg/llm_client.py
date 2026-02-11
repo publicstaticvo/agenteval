@@ -55,9 +55,9 @@ class AsyncLLMClient:
                     data = await resp.json()
             content = data["choices"][0]["message"]["content"]
             return self._availability(content, context)
-        except Exception as e:
-            print("LLMFunctino", type(e), str(e))
-            # if isinstance(e, aiohttp.ClientResponseError) and e.status == 400: print(payload)
+        except Exception as e:            
+            if isinstance(e, aiohttp.ClientResponseError): print("LLMFunctino", type(e), e.status, e)
+            else: print("LLMFunctino", type(e))
             raise
         
     def _availability(self, response, context):

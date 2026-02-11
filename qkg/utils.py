@@ -83,6 +83,7 @@ def extract_json(text: str) -> dict:
     """从文本中提取 JSON 对象"""
     if not text: return {}
     text = robust_backslash(text)
+    text = re.sub(r"\s+", " ", text)
 
     try:
         pattern = re.findall(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)[-1]

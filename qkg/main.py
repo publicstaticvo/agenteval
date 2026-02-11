@@ -5,7 +5,7 @@ import asyncio, aiofiles
 from tenacity import RetryError
 from typing import Dict, List, Any, Optional
 
-from config import Config, LLMServerInfo
+from config import LLMServerInfo
 from search import process_paper
 from utils import skeleton_to_text
 from session_manager import SessionManager, openalex_search_paper
@@ -16,8 +16,8 @@ from llm_client import (
     SelfContradictFilter,
     JointOptionFilter
 )
+from prompts import config
 
-config = Config.from_yaml("config.yaml")
 _file_lock = asyncio.Lock()
 GREEDY_PARAMS = {
     'temperature': 0.0, "max_tokens": 8192, "seed": 42,
@@ -35,7 +35,11 @@ async def searchquery(query_id: int, query: str, papers_per_query: int = 200):
     print(f"Searching papers for {query} ...")
     
     # 1. 调用异步搜索 OpenAlex
-    filters = {"default.search": query, "concepts.id": "C192562407"}
+    filters = {
+        "title_and_abstract.search": query, 
+        "concepts.id": "C41008148", 
+        "from_publication_date": "2016-01-01"
+    }
     search_result = await openalex_search_paper("works", filter=filters, per_page=papers_per_query)
     search_result = search_result.get("results", [])
     print(f"Search papers for {query}, get {len(search_result)} results")
@@ -48,7 +52,7 @@ async def searchquery(query_id: int, query: str, papers_per_query: int = 200):
             paper_data = await process_paper(session, paper_meta)  # title, abstract, url, skeleton
             if paper_data:
                 print(f"Paper {paper_meta['title']} ready. Ainvoke a generate loop.")
-                with open(f"papers/Paper_q{query_id}p{i}.json", "w") as f: 
+                with open(f"papers/ai/Paper_q{query_id}p{i}.json", "w") as f: 
                     paper_data['id'] = f"q{query_id}p{i}"
                     if not paper_data['title']: paper_data['title'] = paper_meta['title']
                     json.dump(paper_data, f, indent=2, ensure_ascii=False)
@@ -77,7 +81,7 @@ async def generate(content: dict[str, Any]):
     
 
 async def filter_specific(generated: list[dict[str, any]]):
-    tasks = [asyncio.create_task(Filter(config.support_model, GREEDY_PARAMS).call(inputs=g, max_tokens=512)) for g in generated]
+    tasks = [asyncio.create_task(Filter(config.critic_models[0], GREEDY_PARAMS).call(inputs=g, max_tokens=512)) for g in generated]
     questions = []
     for g, task in zip(generated, asyncio.as_completed(tasks)):
         try:
@@ -200,6 +204,7 @@ async def generateloop(paper: dict[str, Any]):
         except Exception as e:
             print(f"CriticNode {e}")
             continue
+    print(f"paper {paper['id']} get {len(tested_generated)} valid problems")
 
     async with _file_lock:
         async with aiofiles.open(config.workflow_output, "a+", encoding='utf-8') as f:
@@ -229,7 +234,7 @@ async def debug_test():
         await SessionManager.init()
         if os.path.exists(config.workflow_output): os.remove(config.workflow_output)
         tasks = []
-        with open("temp.jsonl", encoding='utf-8') as f:
+        with open("joint_error.jsonl", encoding='utf-8') as f:
             for x in f:
                 if x.strip():
                     x = json.loads(x.strip())
@@ -253,8 +258,15 @@ async def debug_test():
 async def search():
     try:
         await SessionManager.init()
-        queries = ["graphene", "thermal conductivity", "electric properties", "quantum transport", "light-matter interaction"]
-        tasks = [asyncio.create_task(searchquery(i, q)) for i, q in enumerate(queries)]
+        # queries = ["graphene", "thermal conductivity", "electric properties", "quantum transport", "light-matter interaction"]
+        queries = [
+            "mechanism of in-context learning", 
+            "emergent abilities scaling laws", 
+            "benchmark overfitting in machine learning", 
+            "failure modes of large language models", 
+            "scientific method in machine learning"
+        ]
+        tasks = [asyncio.create_task(searchquery(i, q, 40)) for i, q in enumerate(queries)]
         await asyncio.gather(*tasks, return_exceptions=True)
     finally:
         await SessionManager.close()
