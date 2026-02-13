@@ -1,8 +1,3 @@
-"""
-config.py - config file
-"""
-
-import os
 import yaml
 from dataclasses import dataclass, field
 
@@ -17,8 +12,9 @@ class LLMServerInfo:
 @dataclass(frozen=True)
 class Config:
     subject: str = "material science"
-    input_file: str = "chem.txt"
-    workflow_output: str = "workflow.json"
+    paper_dir: str = "samplepaper"
+    temp_output: str = "temp.jsonl"
+    workflow_output: str = "workflow.jsonl"
     generate_model: LLMServerInfo = field(default_factory=LLMServerInfo)
     support_model: LLMServerInfo = field(default_factory=LLMServerInfo)
     critic_models: list[LLMServerInfo] = field(default_factory=list)
@@ -28,7 +24,8 @@ class Config:
         with open(config_path, encoding='utf-8') as f: config = yaml.safe_load(f)
         return cls(
             subject=config['subject'],
-            input_file=config['input_file'],
+            paper_dir=config['paper_dir'],
+            temp_output=config['temp_output'],
             workflow_output=config['workflow_output'],
             generate_model=LLMServerInfo(**config['generate_model']),
             support_model=LLMServerInfo(**config['support_model']),

@@ -220,7 +220,7 @@ def skeleton_to_dict(paper: list[str | dict]) -> list[dict]:
 
 def skeleton_to_text(paper: list[str | dict]) -> str:
     repr_dict = skeleton_to_dict(paper)
-    repr_str = [f"{s['section_name']}\n\n{'\n\n'.join(s['paragraphs'])}" for i, s in enumerate(repr_dict)]
+    repr_str = [f"{s['section_name']}\n\n{'\n\n'.join(s['paragraphs'])}" for s in repr_dict]
     return '\n\n'.join(repr_str)
 
 

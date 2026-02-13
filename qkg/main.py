@@ -2,30 +2,19 @@ import re
 import json
 import os, glob
 import asyncio, aiofiles
+from typing import Dict, List, Any
 from tenacity import RetryError
-from typing import Dict, List, Any, Optional
 
-from config import LLMServerInfo
 from search import process_paper
 from utils import skeleton_to_text
 from session_manager import SessionManager, openalex_search_paper
-from llm_client import Generate, Filter, Rewrite, Tester
-from llm_client import (
-    ImplausibleFilter,
-    RedundantFilter,
-    SelfContradictFilter,
-    JointOptionFilter
-)
-from prompts import config, NOT_ANSWERABLE
+from llm_client.generate import generate
+from llm_client.valid import valid_check, filter_specific
+from llm_client.perturb import perturb
+from llm_client.knowledge_unit import structure, filter_structure, upgrade, upgraderank
+from prompts import config
 
 _file_lock = asyncio.Lock()
-GREEDY_PARAMS = {
-    'temperature': 0.0, "max_tokens": 8192, "seed": 42,
-    "repetition_penalty": 1.0,  # 设置为1，禁用重复惩罚
-    "length_penalty": 1.0,      # 设置为1，禁用长度惩罚
-    "no_repeat_ngram_size": 0,  # 设置为0，禁用n-gram重复惩罚
-}
-SAMPLE_PARAMS = {'temperature': 0.8, "max_tokens": 8192, "top_p": 0.95}
 
 
 async def searchquery(query_id: int, query: str, papers_per_query: int = 200):
@@ -50,12 +39,13 @@ async def searchquery(query_id: int, query: str, papers_per_query: int = 200):
             paper_data = await process_paper(session, paper_meta)  # title, abstract, url, skeleton
             if paper_data:
                 print(f"Paper {paper_meta['title']} ready. Ainvoke a generate loop.")
-                with open(f"papers/ai/Paper_q{query_id}p{i}.json", "w") as f: 
+                mechanism_units = await structure(paper_meta["structure"])
+                paper_meta['mechanisms'] = mechanism_units
+                with open(f"{config.paper_dir}/q{query_id}p{i}.json", "w") as f: 
                     paper_data['id'] = f"q{query_id}p{i}"
                     if not paper_data['title']: paper_data['title'] = paper_meta['title']
                     json.dump(paper_data, f, indent=2, ensure_ascii=False)
-                await generateloop(paper_data)
-                # await selectnode(query_id, query, i, paper_data)              
+                # await generateloop(paper_data)
                 print(f"Paper {paper_meta['title']} loop concludes.")
         except Exception as e:
             print(f"Metadata {i} of query id {query_id} query {query} fails an {e}")
@@ -68,130 +58,46 @@ async def searchquery(query_id: int, query: str, papers_per_query: int = 200):
     await asyncio.gather(*tasks)
 
 
-async def generate(content: dict[str, Any]):
-    model = Generate(config.generate_model, SAMPLE_PARAMS, 1800)
-    try:
-        generated = await model.call(inputs=content)
-        return generated
-    except Exception as e:
-        print(f"GenerateNode {e}")
-        return
-    
+async def perturbloop(unit: Dict[str, Any]):
+    # perturb
+    perturbs = await perturb(unit)
+    count = [0, 0, 0, 0, 0]
+    for x in perturbs: count[int(x['level'][1]) - 1] += 1
+    print(f"Unit {unit['id']} perturbs lvl {5 if unit['L5'] else 4} distribution {count}")
+    if not perturbs: return
 
-async def filter_specific(generated: list[dict[str, any]]):
-    tasks = [asyncio.create_task(Filter(config.support_model, GREEDY_PARAMS).call(inputs=g, max_tokens=512)) for g in generated]
-    questions = []
-    for g, task in zip(generated, asyncio.as_completed(tasks)):
-        try:
-            eliminate = await task
-            if isinstance(eliminate, bool) and not eliminate: questions.append(g)
-        except Exception as e:
-            print(f"FilterNode {e}")
-    return questions
+    async with _file_lock:
+        async with aiofiles.open(config.temp_output, "a+", encoding='utf-8') as f:
+            for result in perturbs:
+                result['id'] = unit['id']
+                result['title'] = unit['title']
+                await f.write(json.dumps(result, ensure_ascii=False) + "\n")
 
 
-async def rewrite(generated: list[dict[str, any]]):
-    tasks = [asyncio.create_task(Rewrite(config.generate_model, SAMPLE_PARAMS).call(inputs=g)) for g in generated]
-    refine = []
-    for task in asyncio.as_completed(tasks):
-        try:
-            result = await task
-            if result: refine.append(result)
-        except Exception as e:
-            print(f"RewriteNode {e}")
-    return refine
+async def valid_perturb(unit: Dict[str, Any]):
+    pass
 
 
-async def valid_check(generated: dict[str, any]):
-    async def valid(critic: LLMServerInfo):
-        try:
-            self_contradict = await SelfContradictFilter(critic, GREEDY_PARAMS).call(inputs={"question": generated['question']})
-        except RetryError as e:
-            print(f"self_contradict {e.last_attempt}")
-            self_contradict = False
-        if self_contradict: return {"drop": True, "reason": "self-contradicted"}
-        
-        try:
-            redundant = await RedundantFilter(critic, GREEDY_PARAMS).call(inputs=generated)
-        except RetryError as e:
-            print(f"redundant {e.last_attempt}")
-            redundant = False
-        if redundant: return {"drop": True, "reason": "redundant"}
-        
-        try:
-            implausible = await ImplausibleFilter(critic, GREEDY_PARAMS).call(inputs={"question": generated['question']})
-        except RetryError as e:
-            print(f"implausible {e.last_attempt}")
-            implausible = False
-        if implausible == True: return {"drop": True, "reason": "implausible"}
-        
-        try:
-            option_check = await JointOptionFilter(critic, GREEDY_PARAMS).call(inputs=generated)
-            if option_check["trivially_true_without_question"]:
-                return {"drop": True, "reason": "correct without question"}
-            does_not_depend = set(option_check["trivially_false_without_question"] + option_check["does_not_depend_on_question"])
-            if len(does_not_depend) >= 2:
-                return {"drop": True, "reason": "too many independent"}
-            redundant_options = set()
-            for x in option_check["redundant_options"]: redundant_options.update(x)
-        except RetryError as e:
-            print(f"joint option filter {e.last_attempt}")
-            return {"drop": True, "reason": "joint option filter error"}
-        
-        # The final check
-        try:
-            answer = await Tester(critic, GREEDY_PARAMS).call(inputs=generated)
-            if answer == NOT_ANSWERABLE:
-                return {"answer": answer, "drop": True, "reason": "Not answerable"}
-            if answer in does_not_depend:
-                return {"answer": answer, "drop": True, "reason": "select independent answer"}
-            if answer in redundant_options:
-                return {"answer": answer, "drop": True, "reason": "multiple correct answers"}
-        except RetryError as e:
-            print(f"tester {e.last_attempt}")
-            answer = "Error"
-        return {"answer": answer, "drop": False, "independent": list(does_not_depend)}
-    
-    # 多模型评价并试做
-    tasks = [asyncio.create_task(valid(c)) for c in config.critic_models]
-    answers = {}
-    for c, task in zip(config.critic_models, asyncio.as_completed(tasks)):
-        try:
-            result = await task
-            answers[c.model] = result
-        except KeyboardInterrupt:
-            raise
-        except Exception as e:
-            print(f"CriticNode {e}")
-    return {"query": generated, "answers": answers} 
-
-
-async def generateloop(paper: dict[str, Any]):
+async def generateloop(unit: Dict[str, Any]): 
     # generate
-    content = skeleton_to_text(paper['structure'])
-    generated = await generate(content)  
-    print(f"paper {paper['id']} get {len(generated)} problems")
+    generated = await generate(unit)  
+    print(f"Unit {unit['id']} has {len(generated)} problems")
     if not generated: return
 
     # filter
     filtered_generated = await filter_specific(generated)
-    print(f"paper {paper['id']} get {len(filtered_generated)} valid problems")
+    print(f"Unit {unit['id']} has {len(filtered_generated)} valid problems")
     if not filtered_generated: return
 
-    # refine
-    refine = await rewrite(filtered_generated)
-    print(f"paper {paper['id']} get {len(refine)} refined problems")
-    if not refine: return
-
     async with _file_lock:
-        async with aiofiles.open("temp.jsonl", "a+", encoding='utf-8') as f:
-            for result in refine:
-                result['paper_id'] = paper['id']
-                result['title'] = paper['title']
+        async with aiofiles.open(config.temp_output, "a+", encoding='utf-8') as f:
+            for result in filtered_generated:
+                result['id'] = unit['id']
+                result['title'] = unit['title']
                 await f.write(json.dumps(result, ensure_ascii=False) + "\n")
 
     # valid_check + Critic
-    tasks = [asyncio.create_task(valid_check(g)) for g in refine]
+    tasks = [asyncio.create_task(valid_check(g)) for g in filtered_generated]
     tested_generated = []
     for task in asyncio.as_completed(tasks):
         try:
@@ -202,29 +108,32 @@ async def generateloop(paper: dict[str, Any]):
         except Exception as e:
             print(f"CriticNode {e}")
             continue
-    print(f"paper {paper['id']} get {len(tested_generated)} valid problems")
+    print(f"Unit {unit['id']} get {len(tested_generated)} valid problems")
 
     async with _file_lock:
         async with aiofiles.open(config.workflow_output, "a+", encoding='utf-8') as f:
             for result in tested_generated:
-                result['paper_id'] = paper['id']
-                result['title'] = paper['title']
+                result['id'] = unit['id']
+                result['title'] = unit['title']
                 await f.write(json.dumps(result, ensure_ascii=False) + "\n")
 
 
 async def gen():
     try:
         await SessionManager.init()
-        if os.path.exists("temp.jsonl"): os.remove("temp.jsonl")
+        if os.path.exists(config.temp_output): os.remove(config.temp_output)
         if os.path.exists(config.workflow_output): os.remove(config.workflow_output)
         tasks = []
-        for i, n in enumerate(glob.glob(f"{config.input_file}/*.json")):
+        for i, n in enumerate(glob.glob(f"{config.paper_dir}/*.json")):
             with open(n, encoding='utf-8') as f: paper = json.load(f)
-            paper['id'] = i
-            tasks.append(asyncio.create_task(generateloop(paper)))
-        await asyncio.gather(*tasks, return_exceptions=True)
-    finally:
-        await SessionManager.close()
+            for j, u in enumerate(paper['mechanisms']):
+                u['id'] = f"{i}-{j}"
+                u['title'] = paper['title']
+                tasks.append(asyncio.create_task(perturbloop(u)))
+        await asyncio.gather(*tasks)
+    except asyncio.CancelledError: pass
+    except RetryError: pass
+    finally: await SessionManager.close()
 
 
 async def debug_test():
@@ -232,11 +141,11 @@ async def debug_test():
         await SessionManager.init()
         if os.path.exists(config.workflow_output): os.remove(config.workflow_output)
         tasks = []
-        with open("joint_error.jsonl", encoding='utf-8') as f:
+        with open(config.temp_output, encoding='utf-8') as f:
             for x in f:
                 if x.strip():
                     x = json.loads(x.strip())
-                    tasks.append(asyncio.create_task(valid_check(x)))
+                    tasks.append(asyncio.create_task(valid_perturb(x)))
         for task in asyncio.as_completed(tasks):
             try:
                 result = await task
@@ -245,12 +154,9 @@ async def debug_test():
                     f.write(json.dumps(result, ensure_ascii=False) + "\n")
             except Exception as e:
                 print(e, type(e))
-    except asyncio.CancelledError:
-        pass
-    except RetryError as e:
-        pass
-    finally:
-        await SessionManager.close()
+    except asyncio.CancelledError: pass
+    except RetryError as e: pass
+    finally: await SessionManager.close()
 
 
 async def search():
@@ -266,6 +172,44 @@ async def search():
         ]
         tasks = [asyncio.create_task(searchquery(i, q, 40)) for i, q in enumerate(queries)]
         await asyncio.gather(*tasks, return_exceptions=True)
+    finally:
+        await SessionManager.close()
+
+
+async def struct():
+    async def _structure_wrap(paper):
+        content = skeleton_to_text(paper['structure'])
+        
+        units = await structure(content)
+        print(f"Paper {paper['id']} has {len(units)} units")
+
+        units_keep = await filter_structure(units)
+        print(f"Paper {paper['id']} has {len(units_keep)} valid units")
+
+        upgrades = await upgrade(units_keep)
+        print(f"Paper {paper['id']} has {len(upgrades)} upgrade units")
+
+        upgrades_keep = await filter_structure(upgrades)
+        print(f"Paper {paper['id']} has {len(upgrades_keep)} valid upgrade units")
+
+        ranked = await upgraderank(upgrades_keep)
+        count = [0, 0]
+        for x in ranked: count[int(x['L5'])] += 1
+        print(f"Paper {paper['id']} upgrade units ranked {count}")
+
+        paper['mechanisms'] = ranked
+        return paper
+
+    try:
+        await SessionManager.init()
+        tasks = []
+        for n in glob.glob(f"{config.paper_dir}/*.json"):
+            with open(n, encoding='utf-8') as f: paper = json.load(f)
+            tasks.append(asyncio.create_task(_structure_wrap(paper)))
+        for task in asyncio.as_completed(tasks):
+            paper = await task
+            with open(f"{config.paper_dir}/Paper_{paper['id']}.json", 'w', encoding='utf-8') as f: 
+                json.dump(paper, f, ensure_ascii=False, indent=2)
     finally:
         await SessionManager.close()
 

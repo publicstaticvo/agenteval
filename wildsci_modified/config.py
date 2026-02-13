@@ -1,8 +1,3 @@
-"""
-config.py - config file
-"""
-
-import os
 import yaml
 from dataclasses import dataclass, field
 
