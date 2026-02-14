@@ -616,7 +616,7 @@ OUTPUT FORMAT
 ```
 """
 
-PERTURB_DETAILS = [
+PERTURB_REQUIREMENTS = [
     """**LEVEL: L1 Instance Reparameterization**
 
 **Modification rule:**
@@ -746,6 +746,365 @@ def PERTURB_SCHEMA(level: int):
             }
         },
         "additionalProperties": False
+    }
+
+
+PERTURB_CHECK = """You are a formal scientific mechanism validator for the subject area: {subject}.
+
+You are given:
+
+1. Original mechanism M0
+2. Perturbed mechanism M'
+3. Target Level: {description}
+
+------------------------------------------------------------
+OUTPUT FORMAT
+------------------------------------------------------------
+
+Output JSON only:
+
+```json
+{{
+  "level": "{level}",
+  "level_validity": true | false,
+  "structural_validity": true | false,
+  "internal_consistency": true | false,
+  "plausible": true | false,
+  "hidden_failure_detected": true | false,
+  "non_trivial": true | false,
+  "scientific_value": "low | medium | high",
+  "explanation": "Detailed reasoning"
+}}
+```"""
+
+PERTURB_CHECK_DESCRIPTIONS = [
+"""L1 (Instance Reparameterization)
+
+Your task is to determine whether M' is a valid L1 perturbation of M0.
+
+------------------------------------------------------------
+LEVEL-SPECIFIC VALIDATION (L1)
+------------------------------------------------------------
+
+L1 requires structural isomorphism.
+
+Verify:
+
+1. Requires equivalence:
+   Are the "requires" in M' logically equivalent to those in M0?
+
+2. Invariant equivalence:
+   Are the "invariants" logically equivalent to those in M0?
+
+3. Failure mode equivalence:
+   Are the "failure_modes" logically equivalent to those in M0?
+
+4. No structural strengthening or weakening:
+   Has M' introduced any new assumptions, removed constraints,
+   or altered causal structure?
+
+If any structural component is modified beyond reparameterization,
+L1 validity = false.
+
+------------------------------------------------------------
+CROSS-LEVEL SEMANTIC VALIDATION
+------------------------------------------------------------
+
+For M', evaluate:
+
+A. Internal consistency:
+   - Is the mechanism free of logical contradictions?
+   - Do the stated conditions co-exist coherently?
+
+B. Hidden requirement violation:
+   - Does M' implicitly violate any stated require?
+
+C. Plausibility:
+   - Does the scenario violate physical, mathematical,
+     or objective scientific laws?
+
+D. Hidden failure triggering:
+   - Does M' accidentally satisfy any failure_mode?
+
+------------------------------------------------------------
+SCIENTIFIC VALUE & NON-TRIVIALITY
+------------------------------------------------------------
+
+E. Non-triviality:
+   - Is M' more than simple renaming?
+   - Does it preserve interpretive meaning?
+
+F. Scientific relevance:
+   - Does this instantiation preserve meaningful reasoning value?""",
+"""L2 (Requires Weakening)
+
+Your task is to determine whether M' is a valid L2 perturbation.
+
+------------------------------------------------------------
+LEVEL-SPECIFIC VALIDATION (L2)
+------------------------------------------------------------
+
+L2 requires modification of at least one "requires" condition.
+
+Verify:
+
+1. Has at least one require been weakened or removed?
+
+2. Are the invariants in M' still logically preserved?
+
+3. Are all original requires still satisfied in the described scenario,
+   or is the weakening logically meaningful?
+
+4. Does weakening the require directly imply any failure_mode?
+   If yes, L2 validity = false.
+
+5. Is the modified require causally relevant to the mechanism?
+   (Removing an irrelevant require = trivial → invalid.)
+
+------------------------------------------------------------
+CROSS-LEVEL SEMANTIC VALIDATION
+------------------------------------------------------------
+
+A. Internal consistency:
+   - No contradictions among modified conditions.
+
+B. Plausibility:
+   - Does M' remain scientifically realistic?
+
+C. Hidden failure detection:
+   - Does M' implicitly trigger any failure_mode?
+
+------------------------------------------------------------
+SCIENTIFIC VALUE & NON-TRIVIALITY
+------------------------------------------------------------
+
+D. Non-triviality:
+   - Does the weakening meaningfully change applicability scope?
+
+E. Scientific value:
+   - Does it expose boundary sensitivity or mechanism robustness?""",
+"""L3 (Failure Boundary Deformation)
+
+Your task is to determine whether M' is a valid L3 perturbation.
+
+------------------------------------------------------------
+LEVEL-SPECIFIC VALIDATION (L3)
+------------------------------------------------------------
+
+L3 requires modification of at least one failure boundary,
+without actually triggering failure.
+
+Verify:
+
+1. Has at least one failure_mode boundary been modified?
+
+2. Are all requires preserved and satisfied?
+
+3. Are all invariants preserved?
+
+4. Does M' actually trigger any failure_mode?
+   If yes → invalid (this becomes direct failure case).
+
+5. Is the new scenario near a failure threshold,
+   creating boundary tension?
+
+------------------------------------------------------------
+CROSS-LEVEL SEMANTIC VALIDATION
+------------------------------------------------------------
+
+A. Internal consistency:
+   - No logical contradictions.
+
+B. Plausibility:
+   - No violation of objective scientific constraints.
+
+C. Hidden structural drift:
+   - Ensure that only failure boundary changed,
+     not invariants or requires.
+
+------------------------------------------------------------
+SCIENTIFIC VALUE & NON-TRIVIALITY
+------------------------------------------------------------
+
+D. Non-triviality:
+   - Does reasoning require careful threshold analysis?
+
+E. Scientific value:
+   - Does this reveal mechanism robustness margin?"""
+"""L4 (Invariant Violation)
+
+Your task is to determine whether M' is a valid L4 perturbation.
+
+------------------------------------------------------------
+LEVEL-SPECIFIC VALIDATION (L4)
+------------------------------------------------------------
+
+L4 requires:
+
+- All requires remain satisfied.
+- At least one invariant is genuinely violated.
+- No failure_mode is directly triggered.
+
+Verify:
+
+1. Are all requires satisfied in M'?
+
+2. Is at least one invariant logically violated?
+
+3. Is the invariant violation reducible to a listed failure_mode?
+   If yes → invalid (this is trivial failure).
+
+4. Does the mechanism remain superficially applicable?
+
+------------------------------------------------------------
+CROSS-LEVEL SEMANTIC VALIDATION
+------------------------------------------------------------
+
+A. Internal consistency:
+   - No contradictions in scenario.
+
+B. Plausibility:
+   - Violation must be logically possible, not physically impossible.
+
+C. Hidden failure detection:
+   - Ensure invariant violation does not automatically imply failure.
+
+------------------------------------------------------------
+SCIENTIFIC VALUE & NON-TRIVIALITY
+------------------------------------------------------------
+
+D. Non-triviality:
+   - Does resolving this require structural reasoning across components?
+
+E. Scientific value:
+   - Does it reveal causal fragility of the mechanism?""",
+"""L4 (Invariant Violation)
+
+Your task is to determine whether M' is a valid L4 perturbation.
+
+------------------------------------------------------------
+LEVEL-SPECIFIC VALIDATION (L4)
+------------------------------------------------------------
+
+L4 requires:
+
+- All requires remain satisfied.
+- At least one invariant is genuinely violated.
+- No failure_mode is directly triggered.
+
+Verify:
+
+1. Are all requires satisfied in M'?
+
+2. Is at least one invariant logically violated?
+
+3. Is the invariant violation reducible to a listed failure_mode?
+   If yes → invalid (this is trivial failure).
+
+4. Does the mechanism remain superficially applicable?
+
+------------------------------------------------------------
+CROSS-LEVEL SEMANTIC VALIDATION
+------------------------------------------------------------
+
+A. Internal consistency:
+   - No contradictions in scenario.
+
+B. Plausibility:
+   - Violation must be logically possible, not physically impossible.
+
+C. Hidden failure detection:
+   - Ensure invariant violation does not automatically imply failure.
+
+------------------------------------------------------------
+SCIENTIFIC VALUE & NON-TRIVIALITY
+------------------------------------------------------------
+
+D. Non-triviality:
+   - Does resolving this require structural reasoning across components?
+
+E. Scientific value:
+   - Does it reveal causal fragility of the mechanism?""",
+"""L5 (Invariant Substitution)
+
+Your task is to determine whether M' is a valid L5 perturbation.
+
+------------------------------------------------------------
+LEVEL-SPECIFIC VALIDATION (L5)
+------------------------------------------------------------
+
+L5 requires:
+
+- At least one invariant is replaced with a structurally different invariant.
+- The new invariant is NOT logically equivalent.
+- Requires remain satisfied.
+- No failure_mode is directly triggered.
+
+Verify:
+
+1. Is an invariant replaced rather than weakened?
+
+2. Is the new invariant logically non-equivalent to the original?
+
+3. Does this substitution alter causal or explanatory structure?
+
+4. Are requires satisfied?
+
+5. Does M' avoid direct failure triggering?
+
+------------------------------------------------------------
+CROSS-LEVEL SEMANTIC VALIDATION
+------------------------------------------------------------
+
+A. Internal consistency:
+   - No contradictions.
+
+B. Plausibility:
+   - Is the substituted invariant scientifically coherent?
+
+C. Hidden equivalence:
+   - Ensure substitution is not superficial rephrasing.
+
+------------------------------------------------------------
+SCIENTIFIC VALUE & NON-TRIVIALITY
+------------------------------------------------------------
+
+D. Non-triviality:
+   - Does reasoning require reinterpretation of mechanism?
+
+E. Scientific value:
+   - Does substitution reveal theoretical assumptions or alternatives?"""
+]
+
+PERTURB_CHECK_USER = """
+------------------------------------------------------------
+Original mechanism (M0)
+------------------------------------------------------------
+
+{origin}
+
+------------------------------------------------------------
+Perturbed mechanism (M')
+------------------------------------------------------------
+
+{unit}"""
+
+
+def PERTURB_CHECK_SCHEMA(level: str):
+    return {
+        "type": "object",
+        "required": ["level", "level_validity", "structural_validity", "internal_consistency", "plausible", "hidden_failure_detected", "non_trivial", "scientific_value", "explanation"],
+        "properties": {
+            "level": {"const": level},
+            "level_validity": {"type": "boolean"},
+            "structural_validity": {"type": "boolean"},
+            "internal_consistency": {"type": "boolean"},
+            "plausible": {"type": "boolean"},
+            "hidden_failure_detected": {"type": "boolean"},
+            "non_trivial": {"type": "boolean"},
+            "scientific_value": {"type": "string", "enum": ["low", "medium", "high"]},
+            "explanation": {"type": "string", "minLength": 1}
+        }
     }
 
 

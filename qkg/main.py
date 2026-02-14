@@ -10,7 +10,7 @@ from utils import skeleton_to_text
 from session_manager import SessionManager, openalex_search_paper
 from llm_client.generate import generate
 from llm_client.valid import valid_check, filter_specific
-from llm_client.perturb import perturb
+from llm_client.perturb import perturb, perturbcheck
 from llm_client.knowledge_unit import structure, filter_structure, upgrade, upgraderank
 from prompts import config
 
@@ -66,16 +66,17 @@ async def perturbloop(unit: Dict[str, Any]):
     print(f"Unit {unit['id']} perturbs lvl {5 if unit['L5'] else 4} distribution {count}")
     if not perturbs: return
 
+    tasks, valid_perturbs = [], []
+    tasks = [asyncio.create_task(perturbcheck(g, unit)) for g in perturbs]
+    for task in asyncio.as_completed(tasks):
+        if result := await task: valid_perturbs.append(result)
+
     async with _file_lock:
         async with aiofiles.open(config.temp_output, "a+", encoding='utf-8') as f:
-            for result in perturbs:
+            for result in valid_perturbs:
                 result['id'] = unit['id']
                 result['title'] = unit['title']
                 await f.write(json.dumps(result, ensure_ascii=False) + "\n")
-
-
-async def valid_perturb(unit: Dict[str, Any]):
-    pass
 
 
 async def generateloop(unit: Dict[str, Any]): 
@@ -140,18 +141,22 @@ async def debug_test():
     try:
         await SessionManager.init()
         if os.path.exists(config.workflow_output): os.remove(config.workflow_output)
+        origins = {}
+        for i, n in enumerate(glob.glob(f"{config.paper_dir}/*.json")):
+            with open(n, encoding='utf-8') as f: paper = json.load(f)
+            for j, u in enumerate(paper['mechanisms']): origins[f"{i}-{j}"] = u
         tasks = []
         with open(config.temp_output, encoding='utf-8') as f:
             for x in f:
                 if x.strip():
                     x = json.loads(x.strip())
-                    tasks.append(asyncio.create_task(valid_perturb(x)))
+                    tasks.append(asyncio.create_task(perturbcheck(x, origins[x['id']])))
         for task in asyncio.as_completed(tasks):
             try:
                 result = await task
-                if not isinstance(result, dict): continue
-                with open(config.workflow_output, 'a+', encoding='utf-8') as f: 
-                    f.write(json.dumps(result, ensure_ascii=False) + "\n")
+                if result:
+                    with open(config.workflow_output, 'a+', encoding='utf-8') as f: 
+                        f.write(json.dumps(result, ensure_ascii=False) + "\n")
             except Exception as e:
                 print(e, type(e))
     except asyncio.CancelledError: pass
@@ -215,4 +220,4 @@ async def struct():
 
 
 if __name__ == "__main__":
-    asyncio.run(gen())
+    asyncio.run(debug_test())
