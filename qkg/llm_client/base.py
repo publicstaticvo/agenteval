@@ -1,6 +1,8 @@
 import re
 import json
+import asyncio
 import aiohttp
+import functools
 import jsonschema
 import unicodedata
 from tenacity import (
@@ -13,15 +15,18 @@ from tenacity import (
 from config import LLMServerInfo
 from session_manager import SessionManager, RateLimit
 from prompts import *
-from utils import extract_json
+from utils import extract_json, get_shutdown
 
 
 def should_retry(exception: BaseException) -> bool:
+    if get_shutdown(): return False
     if isinstance(exception, NameError): return False
     if isinstance(exception, TypeError): return False
     if isinstance(exception, AttributeError): return False
     if isinstance(exception, KeyboardInterrupt): return False
     if isinstance(exception, NotImplementedError): return False
+    if isinstance(exception, asyncio.CancelledError): return False
+    if isinstance(exception, ImportError) and "sys.meta_path" in str(exception): return False
     return True
 
 
@@ -43,9 +48,12 @@ class AsyncLLMClient:
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1.5, min=1, max=10),
-        retry=retry_if_exception(should_retry)
+        retry=retry_if_exception(should_retry),
+        reraise=True
     )
     async def _post(self, payload: dict, context: dict) -> dict:
+        if get_shutdown():
+            raise asyncio.CancelledError("Client is shutting down")
         try:
             async with RateLimit.LLM_SEMAPHORE:
                 body = json.dumps(payload).encode("utf-8")
@@ -56,8 +64,8 @@ class AsyncLLMClient:
             content = data["choices"][0]["message"]["content"]
             return self._availability(content, context)
         except Exception as e:            
-            if isinstance(e, aiohttp.ClientResponseError): print("LLMFunctino", type(e), e.status, e)
-            else: print("LLMFunctino", type(e))
+            if isinstance(e, aiohttp.ClientResponseError): print("LLMFunctino", type(e), e.status)
+            else: print("LLMFunctino", type(e), str(e))
             raise
         
     def _availability(self, response, context):

@@ -1,8 +1,8 @@
 from config import Config
 config = Config.from_yaml("config.yaml")
-OPTIONS = ['A', 'B', 'C', 'D', 'E']
-EXPAND_OPTIONS = ['A', 'B', 'C', 'D', 'E']
-NOT_ANSWERABLE = "F"
+OPTIONS = ['A', 'B', 'C', 'D']
+EXPAND_OPTIONS = ['A', 'B', 'C', 'D']
+NOT_ANSWERABLE = "E"
 # ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
 
 KNOWLEDGE = f"""You are a senior research scientist in {config.subject}.
@@ -427,7 +427,7 @@ UPGRADE_SCHEMA = {
   }
 }
 
-UPGRADE_RANK = f"""You are a strict scientific benchmark evaluator for the subject area: {config.subject}. You are evaluating the structural validity of a mechanism.
+UPGRADE_RANK = f"""You are a strict scientific mechanism structural evaluator for the subject area: {config.subject}. You are evaluating the structural validity of a mechanism.
 
 Input:
 A canonical mechanism JSON containing:
@@ -446,109 +446,52 @@ A canonical mechanism JSON containing:
 }}
 
 Your task:
-Determine whether this mechanism is structurally coherent, faithful to its original identity, and internally consistent. Classify it into one of the following levels:
+Your task is to evaluate mechanism M0 along four structural dimensions.
 
-L1 — Mechanism Structurally Altered
-L2 — Non-Monotonic Strengthening or Internal Distortion
-L3 — Hidden Assumption Extension
-L4 — Structurally Valid but Underspecified
-L5 — Structurally Sound and Faithful
+------------------------------------------------------------
+EVALUATION DIMENSIONS
+------------------------------------------------------------
 
------------------------------------------
-Evaluation Dimensions
------------------------------------------
+1. Structural Explicitness
+   - Are requires and invariants clearly separable?
+   - Are they explicitly stated rather than implied?
+   - Can they be individually referenced?
 
-1. Preconditions Integrity
+2. Modular Dependency
+   - Can at least one require be modified without collapsing all invariants?
+   - Is the mechanism dependency graph non-trivial but not fully entangled?
 
-- Are all "requires" genuine operating preconditions?
-- Are they necessary rather than descriptive?
-- Are they mutually consistent?
+3. Invariant Rigidity
+   - Is there at least one invariant that constrains behavior?
+   - Would modifying that invariant meaningfully change outcomes?
 
-If violated → L1
+4. Context Sensitivity
+   - Does minimal_example depend on boundary conditions or contextual factors?
+   - Can scenario changes expose hidden tension?
 
------------------------------------------
+------------------------------------------------------------
+OUTPUT FORMAT
+------------------------------------------------------------
 
-2. Structural Identity Preservation
-
-Check whether:
-
-- Core causal structure remains unchanged.
-- No new functional components are introduced.
-- No causal dependencies are altered.
-- produces remain consistent with invariants.
-
-If structural identity changes → L1
-
------------------------------------------
-
-3. Invariant Consistency
-
-Check:
-
-- Are invariants structurally necessary?
-- Do failure_modes correspond to violations of requires or invariants?
-- Do invariants contradict produces?
-
-If major logical inconsistency → L2
-
------------------------------------------
-
-4. Strengthening Validity (If upgrade_applied = true)
-
-Verify:
-
-- requires unchanged.
-- produces unchanged.
-- No new functional components introduced.
-- No expansion of mechanism scope.
-- Upgraded invariant is strictly stronger than original invariant.
-- Strengthening is monotonic (tightening constraints, not redefining mechanism).
-
-If structural alteration → L1  
-If strengthening is non-monotonic or unjustified → L2
-
------------------------------------------
-
-5. Hidden Assumption Leakage
-
-Check whether the mechanism:
-
-- Introduces unstated environmental conditions.
-- Relies on implicit domain assumptions not present in requires.
-- Claims stability or generality without structural support.
-
-If such extension exists → L3
-
------------------------------------------
-
-Decision Logic
------------------------------------------
-
-If structural alteration detected → L1
-Else if non-monotonic strengthening detected → L2
-Else if hidden assumption extension detected → L3
-Else if coherent but underspecified → L4
-Else → L5
-
------------------------------------------
-
-Output Format:
-
+```json
 {{
-  "level": "L1 | L2 | L3 | L4 | L5",
-  "violations": ["..."],
-  "explanations": "Concise structural explanation"
+  "structural_explicitness": true | false,
+  "modular_dependency": true | false,
+  "invariant_rigidity": true | false,
+  "context_sensitivity": true | false,
+  "explanation": "Detailed reasoning."
 }}
-
-Return only JSON. No additional commentary."""
+```"""
 
 UPGRADE_RANK_SCHEMA = {
     "type": "object",
-    "required": ["level", 'violations', 'explanations'],
+    "required": ["structural_explicitness", "modular_dependency", "invariant_rigidity", "context_sensitivity", "explanation"],
     'properties': {
-        "level": {'type': 'string', 'enum': [f"L{i}" for i in range(1, 6)]},
-        "violations": {"type": 'array', 'items': {"type": 'string', 'minLength': 1}},
-        "explanations": {"type": 'string', 'minLength': 1}
+        "structural_explicitness": {"type": "boolean"}, 
+        "modular_dependency": {"type": "boolean"}, 
+        "invariant_rigidity": {"type": "boolean"}, 
+        "context_sensitivity": {"type": "boolean"},
+        "explanation": {"type": 'string', 'minLength': 1}
     },
     "additionalProperties": False
 }
@@ -568,28 +511,21 @@ You MUST generate perturbations strictly following the LEVEL definition below.
 
 ------------------------------------------------------------
 LEVEL DEFINITION
-
-{requirements}
 ------------------------------------------------------------
 
-CRITICAL RULES (MANDATORY):
-
-1. You must generate exactly {number} perturbations.
-2. Do NOT invent new requires, invariants, or failure_modes.
-3. modified_* fields must be subsets of the original mechanism fields.
-4. preserved_* fields must contain all remaining unmodified elements.
-5. modified_* and preserved_* must NOT overlap.
-6. The union of modified_* and preserved_* must exactly equal the original set.
-7. Output STRICT JSON ONLY. No explanation text.
+{requirements}
 
 ------------------------------------------------------------
 GENERATION PROCEDURE (Follow in order for each perturbation)
+------------------------------------------------------------
 
 Step 1. Decide which components are modified according to the LEVEL rule.
 Step 2. Fill modified_* arrays.
 Step 3. Fill preserved_* arrays so that coverage is complete and disjoint.
-Step 4. Write structural_scenario consistent with modifications.
-Step 5. Write tension_location explaining where reasoning difficulty arises.
+Step 4. Derive new_produces as the logical consequence of modified_requires.new + preserved_requires + modified_invariants.new + preserved_invariants.
+Step 5. Derive new_failure_modes strictly as violations of modified_requires.new or modified_invariants.new. Failure modes must be consistent with the new mechanism structure. Do NOT reuse old failure_modes verbatim unless they still logically apply.
+Step 6. Write new minimal_example consistent with modifications.
+Step 7. Write tension_location explaining where reasoning difficulty arises.
 
 ------------------------------------------------------------
 OUTPUT FORMAT
@@ -602,119 +538,180 @@ OUTPUT FORMAT
       "level": "L{level}",
       "perturbation_family": "...",
       "perturbation_operation": "...",
-      "modified_requires": [...],
-      "modified_invariants": [...],
-      "modified_failure_modes": [...],
+      "modified_requires": [
+        {{
+          "origin": "...",
+          "new": "..."
+        }},
+        ...
+      ],
+      "modified_invariants": [
+        {{
+          "origin": "...",
+          "new": "..."
+        }},
+        ...
+      ],
       "preserved_requires": [...],
       "preserved_invariants": [...],
-      "preserved_failure_modes": [...],
-      "structural_scenario": "...",
+      "new_produces": [...],
+      "new_failure_modes": [
+        {{
+          "violated_component": "requires" | "invariants",
+          "violation_description": "...",
+          "original_break_condition": "..."
+        }},
+        ...
+      ],
+      "minimal_example": "...",
       "tension_location": "..."
     }}
   ]
 }}
 ```
+------------------------------------------------------------
+CRITICAL RULES (MANDATORY)
+------------------------------------------------------------
+
+1. You must generate exactly {number} comprehensive, non-trivial perturbations.
+2. Do NOT invent new requires, invariants, or failure_modes.
+3. modified_*.origin fields must be subsets of the original mechanism fields. Fill modified_*.new fields as your rewritten content.
+4. preserved_* fields must contain all remaining unmodified elements.
+5. modified_*.origin and preserved_* must NOT overlap.
+6. The union of modified_*.origin and preserved_* must exactly equal the original set.
+7. Output STRICT JSON ONLY. No explanation text.
+
+The new minimal_example must:
+
+* Explicitly instantiate all requires.
+* Respect all invariants.
+* Not accidentally trigger an obvious failure mode (unless the level definition requires boundary stress).
 """
 
 PERTURB_REQUIREMENTS = [
-    """**LEVEL: L1 Instance Reparameterization**
+"""LEVEL L1: Boundary Stress (Invariant-Preserving Example Shift)
 
-**Modification rule:**
+You must NOT modify:
+- Any requires
+- Any invariants
+- Any failure_modes
+- The mechanism_unit
+- The produces
 
-* modified_requires MUST be [].
-* modified_invariants MUST be [].
-* modified_failure_modes MUST be [].
-* invariant_status MUST be "preserved".
+You are allowed to modify:
+- minimal_example ONLY
 
-**Meaning of modification:**
-Construct an alternative scenario that preserves all requires, invariants, and failure_modes.
-Entities, tokens, or example domains can be changed, and new concrete examples can be instantiated.
-The scenario must still claim requires_satisfied = true and failure_not_triggered = true.
+How to modify:
 
-**You MUST NOT:**
+1. Keep all requires EXACTLY unchanged.
+2. Keep all invariants EXACTLY unchanged.
+3. Keep failure_modes and produces EXACTLY unchanged.
+4. Construct a new minimal_example that:
+   - Explicitly instantiates all original requires.
+   - Fully respects all invariants.
+   - Moves the scenario closer to a known failure mode, but does NOT actually trigger it. Also, do NOT violate any requires or invariants.
+   - Increases reasoning tension by creating ambiguity about whether a failure might occur.
 
-* Modify any structural logic (requires, produces, invariants, failure_modes).
-* Trigger any failure_mode.""",
-    """**LEVEL: L2 Requires Weakening**
+The perturbation must:
+- Stress-test the mechanism.
+- Introduce edge-case conditions.
+- Remain logically valid under the original mechanism.
 
-**Modification rule:**
+You must NOT:
+- Weaken or strengthen any invariant.
+- Implicitly introduce new assumptions.
+- Accidentally trigger any failure mode.
+- Modify produces or reinterpret mechanism_unit.""",
+"""LEVEL L2: Requires Modification (Invariant-Preserving Assumption Shift)
 
-* Exactly ONE element from requires must appear in modified_requires.
-* modified_invariants MUST be [].
-* modified_failure_modes MUST be [].
-* invariant_status MUST be "preserved".
+You must NOT modify:
+- Any invariants
+- Any failure_modes
+- The mechanism_unit
+- The produces
 
-**Meaning of modification:**
-The selected requires condition is weakened or removed, but the scenario must still claim requires_satisfied = true under the weakened interpretation.
+You are allowed to modify:
+- One or more requires
+- minimal_example
 
-**You MUST NOT:**
+How to modify:
 
-* Modify invariants.
-* Modify failure_modes.
-* Trigger any failure condition.""",
-    """**LEVEL: L3 Failure Boundary Deformation**
+1. Modify selected requires while keeping invariants EXACTLY unchanged.
+2. The modified requires must still logically support all original invariants.
+   (If invariants no longer logically follow, the perturbation becomes invalid.)
+3. Do NOT introduce new invariants.
+4. Do NOT weaken or strengthen invariants.
+5. Construct a new minimal_example that:
+   - Satisfies the modified requires.
+   - Fully respects all invariants.
+   - Does NOT trigger any failure mode.
 
-**Modification rule:**
+The perturbation must:
+- Change the assumption structure of the mechanism.
+- Preserve the structural constraint represented by invariants.
+- Create reasoning difficulty due to altered preconditions.
 
-* modified_failure_modes MUST contain exactly one boundary-altered failure_mode.
-* modified_requires MUST be [].
-* modified_invariants MUST be [].
-* invariant_status MUST be "preserved".
+You must NOT:
+- Modify invariants in any form.
+- Introduce hidden background assumptions.
+- Create logical inconsistency between requires and invariants.""",
+"""LEVEL L3: Invariant Modification (Structural Mechanism Change)
 
-**Meaning of modification:**
-The scenario lies near the failure boundary of the selected failure_mode but does not fully trigger it.
-All requires and invariants remain satisfied.
-You can perform threshold perturbation, temporal delay, or partial activation.
+You must modify:
+- At least one invariant
 
-**You MUST NOT:**
+You may also modify:
+- One or more requires (only if logically necessary)
+- minimal_example
 
-* Violate requires.
-* Violate invariants.
-* Fully trigger the failure_mode.""",
-    """**LEVEL: L4 Invariant Violation**
+How to modify:
 
-**Modification rule:**
+1. Change at least one invariant by:
+   - Weakening it,
+   - Strengthening it,
+   - Inverting it,
+   - Replacing it with a structurally different constraint.
+2. If necessary, adjust requires so that the new invariant is logically coherent.
+3. Do NOT preserve the original invariant if it conflicts with the new one.
+4. Derive new_produces and new_failure_modes.
+5. Construct a new minimal_example that:
+   - Satisfies the modified requires.
+   - Fully respects the modified invariants.
+   - Does NOT trigger explicit failure modes unless logically required.
 
-* At least one invariant must appear in modified_invariants.
-* modified_requires MUST be [].
-* modified_failure_modes MUST be [].
-* invariant_status MUST be "partially_violated".
+The perturbation must:
+- Alter the structural logic of the mechanism.
+- Create multi-step reasoning tension.
+- Force evaluation of invariant-level consistency.
 
-**Meaning of modification:**
-Construct a scenario where at least one invariant is violated, while all requires are satisfied.
-The scenario must not directly trigger any existing failure_mode and must remain superficially applicable.
-
-**You MUST NOT:**
-
-* Modify requires.
-* Trigger any failure_mode.""",
-    """**LEVEL: L5 Invariant Substitution**
-
-**Modification rule:**
-
-* Exactly one invariant must appear in modified_invariants (the substituted invariant).
-* modified_requires MUST be [].
-* modified_failure_modes MUST be [].
-* invariant_status MUST be "substituted".
-
-**Meaning of modification:**
-Replace the selected invariant with a structurally different invariant.
-All requires must remain satisfied, and the mechanism must remain internally coherent.
-The new invariant must not be logically equivalent to the original.
-
-**You MUST NOT:**
-
-* Modify requires.
-* Trigger any failure_mode."""
+You must NOT:
+- Keep invariants unchanged.
+- Introduce arbitrary new invariants unrelated to the mechanism.
+- Modify produces.
+- Collapse the perturbation into a mere requires adjustment (which would be L2)."""
 ]
 
-PERTURB_NUMBERS = [2, 2, 2, 3, 2]
+PERTURB_NUMBERS = [3, 3, 3]
 
 
 def PERTURB_SCHEMA(level: int):
-    modified_requires = {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1} if level == 1 else {"const": []}
-    modified_invariants = {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1} if level > 2 else {"const": []}
-    modified_failure_modes = {"type": "array", "items": FAILURE_MODE_SCHEMA, "minItems": 1} if level == 2 else {"const": []}
+    replace = {"type": "object", "required": ['origin', 'new'], "properties": {"origin": {"type": "string", "minLength": 1}, "new": {"type": "string", "minLength": 1}}}
+    modified_invariants = {"type": "array", "items": replace, "minItems": 1} if level == 2 else {"const": []}
+    if level == 0:
+        modified_requires = {"const": []}
+        required = ["level", "perturbation_family", "perturbation_operation", "new_failure_modes", 
+                    "preserved_requires", "preserved_invariants", "minimal_example", "new_produces", 
+                    "tension_location"]
+    elif level == 1:
+        modified_requires = {"type": "array", "items": replace, "minItems": 1}
+        required = ["level", "perturbation_family", "perturbation_operation", "new_failure_modes", 
+                    "preserved_requires", "preserved_invariants", "minimal_example", "new_produces", 
+                    "tension_location", "modified_requires"]
+    else:
+        modified_requires = {"type": "array", "items": replace}
+        required = ["level", "perturbation_family", "perturbation_operation", "new_failure_modes", 
+                    "preserved_requires", "preserved_invariants", "minimal_example", "new_produces", 
+                    "tension_location", "modified_invariants"]
     return {
         "type": "object",
         "required": ["perturbations"],
@@ -724,24 +721,20 @@ def PERTURB_SCHEMA(level: int):
                 "minItems": PERTURB_NUMBERS[level],
                 "items": {
                     "type": "object",
-                    "required": ["level", "perturbation_family", "perturbation_operation", "modified_requires",
-                                "modified_invariants", "modified_failure_modes", "preserved_requires",
-                                "preserved_invariants", "preserved_failure_modes", "structural_scenario",
-                                "tension_location"],
+                    "required": required,
                     "properties": {
                         "level": {"const": f"L{level + 1}"}, 
                         "perturbation_family": {"type": "string", "minLength": 1}, 
                         "perturbation_operation": {"type": "string", "minLength": 1}, 
                         "modified_requires": modified_requires,
-                        "modified_invariants": modified_invariants, 
-                        "modified_failure_modes": modified_failure_modes, 
+                        "modified_invariants": modified_invariants,
                         "preserved_requires": {"type": "array", "items": {"type": "string", "minLength": 1}},
                         "preserved_invariants": {"type": "array", "items": {"type": "string", "minLength": 1}}, 
-                        "preserved_failure_modes": {"type": "array", "items": FAILURE_MODE_SCHEMA}, 
-                        "structural_scenario": {"type": "string", "minLength": 1},
+                        "new_produces": {"type": "array", "items": {"type": "string", "minLength": 1}}, 
+                        "new_failure_modes": {"type": "array", "items": FAILURE_MODE_SCHEMA}, 
+                        "minimal_example": {"type": "string", "minLength": 1},
                         "tension_location": {"type": "string", "minLength": 1}
-                    },
-                    "additionalProperties": False
+                    }
                 }
             }
         },
@@ -749,7 +742,116 @@ def PERTURB_SCHEMA(level: int):
     }
 
 
-PERTURB_CHECK = """You are a formal scientific mechanism validator for the subject area: {subject}.
+PERTURB_VALIDITY = f"""You are a formal scientific mechanism validator for the subject area: {config.subject}. You are given:
+
+- Original mechanism M0
+- Perturbed mechanism M'
+
+Your task is to evaluate the INTERNAL VALIDITY of M'.
+
+------------------------------------------------------------
+CHECK CATEGORY — Logical Integrity
+------------------------------------------------------------
+
+Verify that M':
+
+1. Is non-trivial.
+   (Not a restatement of obvious consequences.)
+2. Is internally consistent.
+   (No contradiction between requires, invariants, produces.)
+3. Is plausible in a realistic scientific setting.
+4. Has scientific significance.
+   (Would reasoning about it matter in real research?)
+5. new_produces are logically derivable from:
+   - mechanism_unit
+   - modified requires
+   - modified invariants
+6. new_failure_modes are correctly derived from violated components.
+
+------------------------------------------------------------
+OUTPUT FORMAT (STRICT JSON)
+------------------------------------------------------------
+
+```json
+{{
+  "is_non_trival": true | false,
+  "is_internally_consistent": true | false,
+  "is_plausible": true | false,
+  "has_scientific_significance": true | false,
+  "is_logically_derivable": true | false,
+  "is_correctly_derived": true | false,
+  "explanation": "..."
+}}
+```"""
+
+PERTURB_CHECK_USER = """
+------------------------------------------------------------
+Original mechanism (M0)
+------------------------------------------------------------
+
+{origin}
+
+------------------------------------------------------------
+Perturbed mechanism (M')
+------------------------------------------------------------
+
+{unit}"""
+
+PERTURB_VALIDITY_SCHEMA = {
+    "type": "object",
+    "required": ["is_non_trival", "is_internally_consistent", "is_plausible", "has_scientific_significance", "is_logically_derivable", "is_correctly_derived", "explanation"],
+    'properties': {
+      "is_non_trival": {"type": "boolean"},
+      "is_internally_consistent": {"type": "boolean"},
+      "is_plausible": {"type": "boolean"},
+      "has_scientific_significance": {"type": "boolean"},
+      "is_logically_derivable": {"type": "boolean"},
+      "is_correctly_derived": {"type": "boolean"},
+      "explanation": {"type": "string", "minLength": 1}
+    },
+    "additionalProperties": False
+}
+
+PERTURB_DEGENERATION = f"""You are a formal scientific mechanism validator for the subject area: {config.subject}. You are given:
+
+- Original mechanism M0
+- Perturbed mechanism M'
+
+Your task is to evaluate whether M' is a genuine perturbation.
+
+------------------------------------------------------------
+CHECK CATEGORY — Perturbation Difference
+------------------------------------------------------------
+
+1. M' must NOT be logically equivalent to M0.
+2. The perturbation must generate a new reasoning requirement.
+3. The perturbation must change the inferential path or constraint interaction.
+4. M' must represent a genuinely different mechanism state.
+
+------------------------------------------------------------
+OUTPUT FORMAT (STRICT JSON)
+------------------------------------------------------------
+
+```json
+{{
+  "non_equivalence": true | false,
+  "generates_new_reasoning_pattern": true | false,
+  "explanation": "..."
+}}
+```"""
+
+PERTURB_DEGENERATION_SCHEMA = {
+    "type": "object",
+    "required": ["non_equivalence", "generates_new_reasoning_pattern", "explanation"],
+    'properties': {
+      "non_equivalence": {"type": "boolean"},
+      "generates_new_reasoning_pattern": {"type": "boolean"},
+      "explanation": {"type": "string", "minLength": 1}
+    },
+    "additionalProperties": False
+}
+
+PERTURB_SEMANTIC = """You are a formal scientific mechanism validator for the subject area: {subject}.
 
 You are given:
 
@@ -765,470 +867,1115 @@ Output JSON only:
 
 ```json
 {{
-  "level": "{level}",
-  "level_validity": true | false,
-  "structural_validity": true | false,
-  "internal_consistency": true | false,
-  "plausible": true | false,
-  "hidden_failure_detected": true | false,
-  "non_trivial": true | false,
-  "scientific_value": "low | medium | high",
-  "explanation": "Detailed reasoning"
+  "level_semantic_validity": "accept" | "reject",
+  "explanation": "..."
 }}
 ```"""
 
-PERTURB_CHECK_DESCRIPTIONS = [
-"""L1 (Instance Reparameterization)
-
-Your task is to determine whether M' is a valid L1 perturbation of M0.
+PERTURB_SEMANTIC_CHECK = [
+"""L1 Boundary Stress (Invariant-Preserving Example Shift)
 
 ------------------------------------------------------------
-LEVEL-SPECIFIC VALIDATION (L1)
+SEMANTIC REQUIREMENTS
 ------------------------------------------------------------
 
-L1 requires structural isomorphism.
+1. The new minimal_example must move closer to a known failure boundary.
+2. It must reduce safety margin without triggering failure.
+3. It must increase ambiguity about failure risk.
+4. It must increase reasoning tension compared to M0.
 
-Verify:
-
-1. Requires equivalence:
-   Are the "requires" in M' logically equivalent to those in M0?
-
-2. Invariant equivalence:
-   Are the "invariants" logically equivalent to those in M0?
-
-3. Failure mode equivalence:
-   Are the "failure_modes" logically equivalent to those in M0?
-
-4. No structural strengthening or weakening:
-   Has M' introduced any new assumptions, removed constraints,
-   or altered causal structure?
-
-If any structural component is modified beyond reparameterization,
-L1 validity = false.
+Reject if:
+- It is merely a cosmetic example change.
+- It does not meaningfully approach a boundary.
+- It makes reasoning easier instead of harder.""",
+"""L2 Requires Modification (Invariant-Preserving Assumption Shift)
 
 ------------------------------------------------------------
-CROSS-LEVEL SEMANTIC VALIDATION
+SEMANTIC REQUIREMENTS
 ------------------------------------------------------------
 
-For M', evaluate:
+1. Requires must be meaningfully modified.
+2. The new requires must alter the inferential starting point.
+3. Invariants must remain structurally intact.
+4. The new requires must still logically support all invariants.
+5. The reasoning path must differ from M0.
 
-A. Internal consistency:
-   - Is the mechanism free of logical contradictions?
-   - Do the stated conditions co-exist coherently?
-
-B. Hidden requirement violation:
-   - Does M' implicitly violate any stated require?
-
-C. Plausibility:
-   - Does the scenario violate physical, mathematical,
-     or objective scientific laws?
-
-D. Hidden failure triggering:
-   - Does M' accidentally satisfy any failure_mode?
+Reject if:
+- The modification is superficial or equivalent.
+- The new requires are redundant.
+- The invariants become unsupported.
+- The perturbation collapses into L1.""",
+"""L3 Invariant Modification (Structural Mechanism Change)
 
 ------------------------------------------------------------
-SCIENTIFIC VALUE & NON-TRIVIALITY
+SEMANTIC REQUIREMENTS
 ------------------------------------------------------------
 
-E. Non-triviality:
-   - Is M' more than simple renaming?
-   - Does it preserve interpretive meaning?
-
-F. Scientific relevance:
-   - Does this instantiation preserve meaningful reasoning value?""",
-"""L2 (Requires Weakening)
-
-Your task is to determine whether M' is a valid L2 perturbation.
-
-------------------------------------------------------------
-LEVEL-SPECIFIC VALIDATION (L2)
-------------------------------------------------------------
-
-L2 requires modification of at least one "requires" condition.
-
-Verify:
-
-1. Has at least one require been weakened or removed?
-
-2. Are the invariants in M' still logically preserved?
-
-3. Are all original requires still satisfied in the described scenario,
-   or is the weakening logically meaningful?
-
-4. Does weakening the require directly imply any failure_mode?
-   If yes, L2 validity = false.
-
-5. Is the modified require causally relevant to the mechanism?
-   (Removing an irrelevant require = trivial → invalid.)
-
-------------------------------------------------------------
-CROSS-LEVEL SEMANTIC VALIDATION
-------------------------------------------------------------
-
-A. Internal consistency:
-   - No contradictions among modified conditions.
-
-B. Plausibility:
-   - Does M' remain scientifically realistic?
-
-C. Hidden failure detection:
-   - Does M' implicitly trigger any failure_mode?
-
-------------------------------------------------------------
-SCIENTIFIC VALUE & NON-TRIVIALITY
-------------------------------------------------------------
-
-D. Non-triviality:
-   - Does the weakening meaningfully change applicability scope?
-
-E. Scientific value:
-   - Does it expose boundary sensitivity or mechanism robustness?""",
-"""L3 (Failure Boundary Deformation)
-
-Your task is to determine whether M' is a valid L3 perturbation.
-
-------------------------------------------------------------
-LEVEL-SPECIFIC VALIDATION (L3)
-------------------------------------------------------------
-
-L3 requires modification of at least one failure boundary,
-without actually triggering failure.
-
-Verify:
-
-1. Has at least one failure_mode boundary been modified?
-
-2. Are all requires preserved and satisfied?
-
-3. Are all invariants preserved?
-
-4. Does M' actually trigger any failure_mode?
-   If yes → invalid (this becomes direct failure case).
-
-5. Is the new scenario near a failure threshold,
-   creating boundary tension?
-
-------------------------------------------------------------
-CROSS-LEVEL SEMANTIC VALIDATION
-------------------------------------------------------------
-
-A. Internal consistency:
-   - No logical contradictions.
-
-B. Plausibility:
-   - No violation of objective scientific constraints.
-
-C. Hidden structural drift:
-   - Ensure that only failure boundary changed,
-     not invariants or requires.
-
-------------------------------------------------------------
-SCIENTIFIC VALUE & NON-TRIVIALITY
-------------------------------------------------------------
-
-D. Non-triviality:
-   - Does reasoning require careful threshold analysis?
-
-E. Scientific value:
-   - Does this reveal mechanism robustness margin?"""
-"""L4 (Invariant Violation)
-
-Your task is to determine whether M' is a valid L4 perturbation.
-
-------------------------------------------------------------
-LEVEL-SPECIFIC VALIDATION (L4)
-------------------------------------------------------------
-
-L4 requires:
-
-- All requires remain satisfied.
-- At least one invariant is genuinely violated.
-- No failure_mode is directly triggered.
-
-Verify:
-
-1. Are all requires satisfied in M'?
-
-2. Is at least one invariant logically violated?
-
-3. Is the invariant violation reducible to a listed failure_mode?
-   If yes → invalid (this is trivial failure).
-
-4. Does the mechanism remain superficially applicable?
-
-------------------------------------------------------------
-CROSS-LEVEL SEMANTIC VALIDATION
-------------------------------------------------------------
-
-A. Internal consistency:
-   - No contradictions in scenario.
-
-B. Plausibility:
-   - Violation must be logically possible, not physically impossible.
-
-C. Hidden failure detection:
-   - Ensure invariant violation does not automatically imply failure.
-
-------------------------------------------------------------
-SCIENTIFIC VALUE & NON-TRIVIALITY
-------------------------------------------------------------
-
-D. Non-triviality:
-   - Does resolving this require structural reasoning across components?
-
-E. Scientific value:
-   - Does it reveal causal fragility of the mechanism?""",
-"""L4 (Invariant Violation)
-
-Your task is to determine whether M' is a valid L4 perturbation.
-
-------------------------------------------------------------
-LEVEL-SPECIFIC VALIDATION (L4)
-------------------------------------------------------------
-
-L4 requires:
-
-- All requires remain satisfied.
-- At least one invariant is genuinely violated.
-- No failure_mode is directly triggered.
-
-Verify:
-
-1. Are all requires satisfied in M'?
-
-2. Is at least one invariant logically violated?
-
-3. Is the invariant violation reducible to a listed failure_mode?
-   If yes → invalid (this is trivial failure).
-
-4. Does the mechanism remain superficially applicable?
-
-------------------------------------------------------------
-CROSS-LEVEL SEMANTIC VALIDATION
-------------------------------------------------------------
-
-A. Internal consistency:
-   - No contradictions in scenario.
-
-B. Plausibility:
-   - Violation must be logically possible, not physically impossible.
-
-C. Hidden failure detection:
-   - Ensure invariant violation does not automatically imply failure.
-
-------------------------------------------------------------
-SCIENTIFIC VALUE & NON-TRIVIALITY
-------------------------------------------------------------
-
-D. Non-triviality:
-   - Does resolving this require structural reasoning across components?
-
-E. Scientific value:
-   - Does it reveal causal fragility of the mechanism?""",
-"""L5 (Invariant Substitution)
-
-Your task is to determine whether M' is a valid L5 perturbation.
-
-------------------------------------------------------------
-LEVEL-SPECIFIC VALIDATION (L5)
-------------------------------------------------------------
-
-L5 requires:
-
-- At least one invariant is replaced with a structurally different invariant.
-- The new invariant is NOT logically equivalent.
-- Requires remain satisfied.
-- No failure_mode is directly triggered.
-
-Verify:
-
-1. Is an invariant replaced rather than weakened?
-
-2. Is the new invariant logically non-equivalent to the original?
-
-3. Does this substitution alter causal or explanatory structure?
-
-4. Are requires satisfied?
-
-5. Does M' avoid direct failure triggering?
-
-------------------------------------------------------------
-CROSS-LEVEL SEMANTIC VALIDATION
-------------------------------------------------------------
-
-A. Internal consistency:
-   - No contradictions.
-
-B. Plausibility:
-   - Is the substituted invariant scientifically coherent?
-
-C. Hidden equivalence:
-   - Ensure substitution is not superficial rephrasing.
-
-------------------------------------------------------------
-SCIENTIFIC VALUE & NON-TRIVIALITY
-------------------------------------------------------------
-
-D. Non-triviality:
-   - Does reasoning require reinterpretation of mechanism?
-
-E. Scientific value:
-   - Does substitution reveal theoretical assumptions or alternatives?"""
+1. At least one invariant must be structurally changed.
+2. The new invariant must alter the constraint structure.
+3. The modification must expand, shrink, or reshape the admissible mechanism space.
+4. The reasoning process must change at the structural level.
+
+Reject if:
+- The invariant change is merely a rewording.
+- The inferential structure remains identical.
+- The perturbation is reducible to a requires-only change (L2).""",
 ]
 
-PERTURB_CHECK_USER = """
+PERTURB_CRITIC = """You are an adversarial scientific perturbation critic for the subject area: {subject}. Your task is to determine whether the perturbed mechanism M' constitutes a VALID and USEFUL perturbation of M0 under the specified Level constraint.
+
+You are NOT checking formatting or checking schema compliance. You are evaluating reasoning transformation.
+
+You are given:
+
+1. Original mechanism M0
+2. Perturbed mechanism M'
+3. Target Level: {level_description}
+
 ------------------------------------------------------------
-Original mechanism (M0)
+EVALUATION OBJECTIVES
 ------------------------------------------------------------
 
-{origin}
+You must evaluate the following dimensions:
+
+(1) Reasoning Transformation
+
+Does M' require a different reasoning pathway than M0?
+
+Assess whether the original solution strategy can:
+- be reused exactly
+- be reused with minor modification
+- fails completely
 
 ------------------------------------------------------------
-Perturbed mechanism (M')
+
+(2) Level-Consistent Disruption
+
+Does the magnitude and type of disruption match the Level definition?
+
+The required type of disruption of the level {level} is {mini_description}.
+
+Reject if disruption is:
+- weaker than required
+- stronger than allowed
+- type-mismatched
+
 ------------------------------------------------------------
 
-{unit}"""
+(3) Problem Generativity
+
+Would M' naturally generate a new scientific question?
+
+Specifically:
+- Does it introduce a new uncertainty?
+- Does it force new inference steps?
+- Does it create new trade-offs or failure analysis?
+
+------------------------------------------------------------
+
+(4) Degeneracy Detection
+
+Detect whether M' is:
+
+- Trivial restatement
+- Linguistic paraphrase
+- Boundary shift with no reasoning effect
+- Equivalent invariant disguised as substitution
+- Internally incoherent
+
+------------------------------------------------------------
+
+OUTPUT FORMAT
+------------------------------------------------------------
+
+Output JSON only:
+
+```json
+{{
+  "reasoning_shift": "none" | "minor" | "structural",
+  "solution_reuse_status": "exact_reuse" | "minor_modification" | "new_framework_required",
+  "level_disruption_match": "valid" | "underpowered" | "overpowered" | "wrong_type",
+  "generates_new_problem": true | false,
+  "degeneracy_detected": true | false,
+  "scientific_tension_introduced": "none" | "moderate" | "strong",
+  "final_verdict": "accept" | "reject",
+  "analysis_summary": "Concise explanation."
+}}"""
+
+PERTURB_CRITIC_DESCRIPTION = [
+"""L1 Boundary Stress (Invariant-Preserving Example Shift)
+Failure boundary or operational regime changed. Requires and invariants preserved. Increased reasoning depth required.""",
+"""L2 Requires Modification (Invariant-Preserving Assumption Shift)
+At least one requires condition modified. Invariants preserved. Reasoning framework adjusted but not destroyed.""",
+"""L3 Invariant Modification (Structural Mechanism Change)
+Core invariant replaced by a different structural principle. Mechanism ontology shifts. New conceptual framing required."""
+]
+
+PERTURB_CRITIC_MINI_DESCRIPTION = [
+    "boundary deformation",
+    "requires-space shift", 
+    "invariant replacement"
+]
+
+PERTURB_CRITIC_SCHEMA = {
+    "type": "object",
+    "required": ["reasoning_shift", "solution_reuse_status", "level_disruption_match",
+                 "generates_new_problem", "degeneracy_detected", "scientific_tension_introduced",
+                 "final_verdict", "analysis_summary"],
+    "properties": {
+        "reasoning_shift": {"type": "string", "enum": ["none", "minor", "structural"]}, 
+        "solution_reuse_status": {"type": "string", "enum": ["exact_reuse", "minor_modification", "new_framework_required"]}, 
+        "level_disruption_match": {"type": "string", "enum": ["valid", "underpowered", "overpowered", "wrong_type"]},
+        "generates_new_problem": {"type": "boolean"}, 
+        "degeneracy_detected": {"type": "boolean"}, 
+        "scientific_tension_introduced": {"type": "string", "enum": ["none", "moderate", "strong"]},
+        "final_verdict": {"type": "string", "enum": ["accept", "reject"]}, 
+        "analysis_summary": {"type": "string"}
+    },
+    "additionalProperties": False
+}
+
+GRAPH = """You are a structural reasoning graph constructor. Your task is to construct FOUR structurally symmetric reasoning graphs derived from the given scientific mechanism.
+
+You are NOT generating prose explanations. You are NOT generating answer options. You are NOT writing a question paragraph. You are generating formal reasoning structures only.
+
+--------------------------------------------
+OUTPUT FORMAT (STRICT JSON)
+
+{
+  "mechanism_core": {
+    "requires": [...],
+    "invariants": [...],
+    "failure_modes": [...]
+  },
+  "tension_node": {
+    "structural_conflict": "...",
+    "conflicting_components": [...]
+  },
+  "reasoning_graphs": [
+    {
+      "id": "A",
+      "assumption_profile": {
+        "scaling_assumption": "...",
+        "boundary_assumption": "...",
+        "invariant_handling": {
+          "for_each_invariant": {
+            "invariant_1": "preserved / reinterpreted / relaxed",
+            "invariant_2": "...",
+            ...
+          }
+        },
+        "failure_mode_handling": {
+          "for_each_failure_mode": {
+            "failure_1": "triggered / suppressed / delayed",
+            ...
+          }
+        }
+      },
+      "logical_progression": [
+        "formal step 1",
+        "formal step 2",
+        "formal step 3"
+      ],
+      "predicted_outcome": "...",
+      "is_correct": true/false
+    },
+    ...
+  ]
+}
+
+--------------------------------------------
+STRICT STRUCTURAL RULES
+
+1. All four graphs must:
+   - Handle every invariant explicitly.
+   - Handle every failure_mode explicitly.
+   - Use the same tension_node.
+   - Have the same number of logical steps.
+
+2. The only allowed difference between graphs:
+   - Different invariant interpretation.
+   - Different failure_mode activation logic.
+   - Different scaling assumption.
+
+3. Exactly ONE graph must be globally consistent. Others must fail due to structural inconsistency.
+
+4. No natural language persuasion.
+   No rhetorical strengthening.
+   No extreme terms (strictly, necessarily, entirely).
+
+5. If symmetry cannot be achieved, regenerate internally.
+"""
+
+GRAPH_SCHEMA = {
+  "type": "object",
+  "additionalProperties": False,
+  "required": ["mechanism_core", "tension_node", "reasoning_graphs"],
+  "properties": {
+    "mechanism_core": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["requires", "invariants", "failure_modes"],
+        "properties": {
+            "requires": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "invariants": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "failure_modes": {"type": "array", "items": {"type": "string", "minLength": 1}}
+        }
+    },
+    "tension_node": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["structural_conflict", "conflicting_components"],
+        "properties": {
+            "structural_conflict": {"type": "string", "minLength": 1},
+            "conflicting_components": {"type": "array", "items": {"type": "string", "minLength": 1}}
+        }
+    },
+    "reasoning_paths": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "prefixItems": [
+        {
+          "type": "object",
+          "additionalProperties": False,
+          "required": ["id", "assumption_profile", "logical_progression", "predicted_outcome", "is_correct"],
+          "properties": {
+            "id": {"const": x},
+            "logical_progression": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "assumption_profile": {
+              "type": "object",
+              "additionalProperties": False,
+              "required": ["scaling_assumption", "boundary_assumption", "invariant_handling", "failure_mode_handling"],
+              "properties": {
+                "scaling_assumption": {"type": "string", "minLength": 1},
+                "boundary_assumption": {"type": "string", "minLength": 1},
+                "invariant_handling": {
+                    "type": "object",
+                    
+                },
+                "failure_mode_handling": {"type": "array", "items": {"type": "string", "minLength": 1}}
+              }
+            },
+            "predicted_outcome": {"type": "string", "minLength": 1},
+            "is_correct": {"type": "boolean"}
+          }
+        }
+        for x in OPTIONS
+      ],
+      "items": False
+    }
+  }
+}
+
+GENERATE = """You are a formal scientific question constructor. You are given:
+
+- A structural reasoning graph with four symmetric paths.
+
+Your task:
+Transform the structural graph into a multiple-choice question.
+
+--------------------------------------------
+OUTPUT FORMAT (STRICT JSON)
+
+{
+  "mechanism_summary": "...",
+  "question": "...",
+  "options": [
+    {"id": "A", "statement": "..."},
+    {"id": "B", "statement": "..."},
+    {"id": "C", "statement": "..."},
+    {"id": "D", "statement": "..."}
+  ],
+  "correct_option": "A/B/C/D"
+}
+
+--------------------------------------------
+MANDATORY CONSTRAINTS
+
+1. The question must define all entities explicitly.
+2. The phrase “the mechanism” is forbidden.
+3. No undefined abbreviations.
+4. Each option must correspond exactly to one reasoning_graph predicted_outcome.
+5. You may NOT introduce new causal links.
+6. Options must not differ in wording strength.
+7. No option may contain absolute language.
+8. The question must be solvable only by structural reasoning.
+
+If mapping introduces new structure, regenerate internally.
+"""
+
+ERROR_PATTERN_SET = [
+  "Overgeneralization",
+  "Hidden Assumption Injection",
+  "Invariant Confusion",
+  "Requires-Produce Conflation",
+  "Failure Mode Neglect",
+  "Causal Direction Reversal",
+  "Boundary Condition Misapplication",
+  "Overfitting to Original Mechanism",
+  "False Necessity Inference",
+  "Spurious Simplification",
+  "Constraint Drop",
+  "Invariant Preservation Bias",
+  "Failure Under Distribution Shift",
+  "Mode Collapse Reasoning",
+  "Surface Similarity Trap"
+]
+
+GENERATE_SCHEMA = {}
+
+FILTER = f"""You are a strict scientific benchmark filter for the subject area: {config.subject}. Your task is to evaluate a multiple-choice scientific reasoning question.
+
+The question has 4 reasoning paths (A–D). Exactly one is structurally consistent with the mechanism. The others are intended to be structurally flawed but locally plausible.
+
+Your task is NOT to solve the question. Your task is to evaluate structural symmetry and tension quality.
+
+------------------------------------------------------------
+INPUT
+------------------------------------------------------------
+
+- question
+- mechanism_summary
+- structural_tension_anchor
+- reasoning_paths (A–D)
+
+------------------------------------------------------------
+EVALUATION CRITERIA
+------------------------------------------------------------
+
+1. Local Plausibility Symmetry
+For each path:
+- Is it internally coherent?
+- Does it avoid obvious logical jumps?
+- Does it avoid extreme language cues (e.g., strictly, necessarily, entirely)?
+- Does it avoid trivial contradiction?
+
+If one path is clearly more polished or more stable → false.
+Otherwise → true.
+
+------------------------------------------------------------
+
+2. Structural Complexity Balance
+
+Compare paths on:
+- number of requires used
+- number of invariants referenced
+- number of failure_modes referenced
+- reasoning chain depth
+
+If one path is structurally deeper or more comprehensive → false.
+Otherwise → true.
+
+------------------------------------------------------------
+
+3. Divergence Node Check
+
+Determine whether:
+- All paths diverge at the same structural decision point.
+
+If divergence occurs at unrelated places → false.
+Otherwise → true.
+
+------------------------------------------------------------
+
+4. Structural Failure Tension Check
+
+Verify:
+- Do at least two reasoning paths handle a structural boundary differently?
+- Is there a clear structural tension around a constraint or stability condition?
+- Is the correct path resolving that tension differently from at least one incorrect path?
+
+If no real structural boundary is being contested → false.
+
+------------------------------------------------------------
+
+5. Structural Constraint Engagement
+
+Definition:
+A question has structural constraint engagement if at least two reasoning paths handle a meaningful mechanism boundary or constraint differently, and the correct path resolves this boundary coherently.
+
+Evaluation Logic:
+
+1. Identify whether a clear structural boundary exists (e.g., capacity–interference tradeoff, invariant limit, failure boundary).
+2. Check whether at least two reasoning paths explicitly or implicitly treat this boundary differently.
+3. Verify that the correct path resolves the boundary through constraint-consistent reasoning rather than surface plausibility.
+
+Return:
+- true  → if genuine structural tension exists.
+- false → if no meaningful boundary is contested or if all paths operate in the same logic space.
+
+------------------------------------------------------------
+
+6. Dominance Cue Detection
+
+Is the correct path visibly more cautious, more nuanced, or more globally consistent in a way that makes it stand out?
+
+------------------------------------------------------------
+
+OUTPUT FORMAT (STRICT JSON ONLY)
+------------------------------------------------------------
+
+```json
+{{
+  "local_symmetry": true / false,
+  "complexity_balance": true / false,
+  "divergence_valid": true / false,
+  "structural_tension": true / false,
+  "structural_constraint_engagement": true / false,
+  "dominance_cue_detected": true / false,
+  "critical_issue": "short explanation"
+}}
+```"""
+
+FILTER_SCHEMA = {
+  "type": "object", 
+  "requires": ["local_symmetry", "complexity_balance", "divergence_valid", "structural_tension", "structural_constraint_engagement", "dominance_cue_detected", "critical_issue"],
+  "properties": {
+      "local_symmetry": {"type": "boolean"},
+      "complexity_balance": {"type": "boolean"},
+      "divergence_valid": {"type": "boolean"},
+      "structural_tension": {"type": "boolean"},
+      "structural_constraint_engagement": {"type": "boolean"},
+      "dominance_cue_detected": {"type": "boolean"},
+      "critical_issue": {"type": "string", "minLength": 1},
+  },
+  "additionalProperties": False
+}
+
+MINITEST = f"""You are an expert on {config.subject}. You are given a scientific reasoning question with 4 reasoning paths (A–D).
+
+Do NOT deeply analyze structural consistency. Instead, choose the option that appears MOST PLAUSIBLE on first-pass reasoning. If none of these options are plausible, please choose "E. None of the above is plausible".
+
+------------------------------------------------------------
+INPUT
+------------------------------------------------------------
+
+- question
+- reasoning_paths (A–D)
+
+------------------------------------------------------------
+OUTPUT FORMAT
+------------------------------------------------------------
+
+```json
+{{
+  "selected_option": "A | B | C | D | E",
+  "explanation": "..."
+}}
+```
+"""
+
+MINITEST_SCHEMA = {
+  "type": "object",
+  "required": ["selected_option", "explanation"],
+  "properties": {
+      "selected_option": {"type": "string", "enum": EXPAND_OPTIONS + [NOT_ANSWERABLE]},
+      "explanation": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": False
+}
+
+REVERSE_CONSISTENCY = f"""You are a strict scientific benchmark filter for the subject area: {config.subject}. You are evaluating structural constructability of reasoning paths.
+
+You are given:
+
+- A mechanism summary
+- A question
+- Three reasoning paths (A–C)
+
+For EACH reasoning path independently:
+
+Assume the reasoning path is correct.
+
+Your task:
+Determine whether it is possible to construct a logically consistent mechanism, fully compatible with the question stem and mechanism summary, that would make this reasoning path internally valid.
+
+Important:
+
+- Do NOT judge which option is actually correct.
+- Do NOT compare paths.
+- Evaluate each path independently.
+- A path is "constructable" only if no internal contradiction with preserved invariants, stated requirements, or tested failure modes is unavoidable.
+
+If the path requires violating preserved invariants, ignoring tested failure modes, or contradicting the question setup, then it is NOT constructable.
+
+------------------------------------------------------------
+EVALUATION CRITERIA
+------------------------------------------------------------
+
+For each path check:
+
+1. Internal Logical Coherence
+2. Compatibility with preserved invariants
+3. No unavoidable triggering of forbidden failure_modes
+4. No contradiction with the scenario described in the question
+5. Does not rely on undefined or fabricated assumptions
+
+------------------------------------------------------------
+OUTPUT FORMAT (STRICT JSON)
+------------------------------------------------------------
+
+```json
+{{
+  "A": {{
+    "constructable": true / false,
+    "reason": "short explanation"
+  }},
+  "B": {{
+    "constructable": true / false,
+    "reason": "short explanation"
+  }},
+  "C": {{
+    "constructable": true / false,
+    "reason": "short explanation"
+  }}
+}}
+```"""
+
+REVERSE_CONSISTENCY_USER = """
+------------------------------------------------------------
+Mechanism Summary
+------------------------------------------------------------
+
+{unit}
+
+------------------------------------------------------------
+Question
+------------------------------------------------------------
+
+{q}
+
+------------------------------------------------------------
+Reasoning Paths
+------------------------------------------------------------
+
+{options}"""
+
+REVERSE_CONSISTENCY_SCHEMA = {
+    "type": "object",
+    "required": ['A', 'B', 'C'],
+    "properties": {
+        x: {
+            "type": "object",
+            "required": ["constructable", "reason"],
+            "properties": {
+                "constructable": {"type": "boolean"},
+                "reason": {"type": "string", "minLength": 1}
+            },
+            "additionalProperties": False
+        }
+        for x in ['A', 'B', 'C']
+    },
+    "additionalProperties": False
+}
+
+VALID = f"""You are a strict scientific benchmark filter for the subject area: {config.subject}. Your task is to evaluate the intrinsic quality of a question.
+
+Input: 
+A single question only.
+
+You must evaluate the following four criteria independently:
+
+1. language_reasonableness
+2. non_triviality
+3. unambiguity
+4. no_semantic_redundancy
+
+For each criterion:
+- Output true or false.
+- Provide structured reasoning steps explaining how you reached the conclusion.
+- Your reasoning must follow the defined evaluation logic below.
+
+-----------------------------------
+Evaluation Logic Definitions
+-----------------------------------
+
+(1) language_reasonableness
+
+Definition:
+The question must be grammatically valid, syntactically coherent, and semantically interpretable.
+
+Evaluation Steps:
+- Step 1: Check for grammatical completeness (subject, predicate, logical connectors).
+- Step 2: Check for internal logical consistency (no contradictory constraints inside the question).
+- Step 3: Check for semantic interpretability (a well-defined task is being requested).
+If any step fails → false.
+Otherwise → true.
+
+(2) non_triviality
+
+Definition:
+The question should require non-obvious reasoning or structural inference.
+
+Evaluation Steps:
+- Step 1: Determine if the answer can be retrieved by direct recall of a single common fact.
+- Step 2: Determine if the question can be solved via pattern-matching without reasoning.
+- Step 3: Determine whether solving requires combining at least two constraints, logical steps, or structural reasoning.
+If Steps 1 or 2 are true AND Step 3 is false → trivial → false.
+Otherwise → true.
+
+(3) unambiguity
+
+Definition:
+The question must have a single clearly defined interpretation and answer space.
+
+Evaluation Steps:
+- Step 1: Identify all possible interpretations.
+- Step 2: Check if multiple interpretations lead to different valid answers.
+- Step 3: Check if key terms are underspecified.
+If ambiguity affects answer determinability → false.
+Otherwise → true.
+
+(4) no_semantic_redundancy
+
+Definition:
+The question should not contain duplicated constraints that do not increase structural difficulty.
+
+Evaluation Steps:
+- Step 1: Identify repeated semantic constraints.
+- Step 2: Determine if removing duplicated information changes difficulty.
+If duplicated constraints exist and do not change reasoning path → false.
+Otherwise → true.
+
+-----------------------------------
+
+Output format (strict JSON):
+
+```json
+{{
+  "language_reasonableness": {{
+    "decision": true | false,
+    "explanation": "..."
+  }},
+  "non_triviality": {{
+    "decision": true | false,
+    "explanation": "..."
+  }},
+  "unambiguity": {{
+    "decision": true | false,
+    "explanation": "..."
+  }},
+  "no_semantic_redundancy": {{
+    "decision": true | false,
+    "explanation": "..."
+  }}
+}}
+```
+"""
+
+VALID_SCHEMA = {
+    "type": "object",
+    "properties": {
+        x: {
+            "type": "object",
+            "properties": {
+                "decision": {"type": "boolean"},
+                "explanation": {"type": "string", "minLength": 1}
+            },
+            "required": ["decision", "explanation"],
+            "additionalProperties": False
+        }
+        for x in ["language_reasonableness", "non_triviality", "unambiguity", "no_semantic_redundancy"]
+    },
+    "required": ["language_reasonableness", "non_triviality", "unambiguity", "no_semantic_redundancy"],
+    "additionalProperties": False
+}
+
+VALID_TENSION = f"""You are a strict structural diagnostic evaluator for the subject area: {config.subject}.  
+
+Input:
+- A single question. The question contains a predefined list: tested_failure_modes (guaranteed non-empty at schema level).
+
+Your task is to determine whether the question genuinely activates those failure modes.
+
+Evaluate the following:
+
+1. failure_mode_activation
+2. structural_tension_present
+3. error_pattern_distinctness
+
+-----------------------------------
+Evaluation Logic Definitions
+-----------------------------------
+
+(1) failure_mode_activation
+
+Definition:
+Each tested_failure_mode must be structurally required for correct solving.
+
+Evaluation Steps:
+- Step 1: Identify each tested_failure_mode.
+- Step 2: For each failure mode, check whether a solver who ignores that failure mode would likely fail.
+- Step 3: If a failure mode can be bypassed without affecting success → not activated.
+If all tested_failure_modes are structurally necessary → true.
+Otherwise → false.
+
+(2) structural_tension_present
+
+Definition:
+The question must contain at least two interacting constraints that create competing reasoning pressure.
+
+Evaluation Steps:
+- Step 1: Identify constraints.
+- Step 2: Determine if constraints are independent or interacting.
+- Step 3: Check whether satisfying one constraint increases complexity of satisfying another.
+If interaction exists → true.
+If constraints are additive but non-interacting → false.
+
+(3) error_pattern_distinctness
+
+Definition:
+Different incorrect reasoning paths should produce distinguishable answer types.
+
+Evaluation Steps:
+- Step 1: Enumerate plausible incorrect reasoning strategies.
+- Step 2: Determine whether these produce distinguishable outputs.
+- Step 3: If most wrong paths collapse to same shallow error → not distinct.
+If at least two distinct systematic error patterns exist → true.
+
+-----------------------------------
+
+Output format (strict JSON):
+
+```json
+{{
+  "failure_mode_activation": {{
+    "decision": true | false,
+    "explanation": "..."
+  }},
+  "structural_tension_present": {{
+    "decision": true | false,
+    "explanation": "..."
+  }},
+  "error_pattern_distinctness": {{
+    "decision": true | false,
+    "explanation": "..."
+  }}
+}}
+```"""
+
+VALID_TENSION_SCHEMA = {
+    "type": "object",
+    "properties": {
+        x: {
+            "type": "object",
+            "properties": {
+                "decision": {"type": "boolean"},
+                "explanation": {"type": "string", "minLength": 1}
+            },
+            "required": ["decision", "explanation"],
+            "additionalProperties": False
+        }
+        for x in ["failure_mode_activation", "structural_tension_present", "error_pattern_distinctness"]
+    },
+    "required": ["failure_mode_activation", "structural_tension_present", "error_pattern_distinctness"],
+    "additionalProperties": False
+}
+
+TEST = f"""You are an expert on {config.subject}. You are asked to answer the following multiple-choice question.
+
+If you determine that:
+- the assumptions are internally contradictory,
+- the question cannot be meaningfully adjudicated given its stated assumptions,
+- or the question is ill-posed as a scientific query,
+
+you MUST select option {NOT_ANSWERABLE}: "None of the above. / This question is unanswerable".
+
+Otherwise, select the single best answer.
+
+Explain your reasoning step by step. Output the selected option letter and the reasoning steps in the following JSON format:
+
+```json
+{{ 
+  "selected_answer": "A" | "B" | "C" | "D" | "E",
+  "reasoning_steps": "..."
+}}
+```
+"""
+
+TEST_SCHEMA = {
+  "type": "object",
+  "required": ["selected_answer", "reasoning_steps"],
+  "properties": {
+      "selected_answer": {"type": "string", "enum": EXPAND_OPTIONS + [NOT_ANSWERABLE]},
+      "reasoning_steps": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": False
+}
+
+WRONG_ANSWER = """You are a strict structural diagnostic evaluator for the subject area: {subject}. You are evaluating reasoning traces of incorrect answers in a scientific benchmark.
+
+Your task is ONLY to classify each incorrect reasoning trace into one of two categories:
+
+1. structure_error
+2. execution_error
+
+------------------------------------------------------------
+DEFINITIONS
+------------------------------------------------------------
+
+STRUCTURE_ERROR:
+
+A structural reasoning deviation that reflects a systematic misinterpretation 
+of the mechanism specification. It must involve incorrect reasoning about at least one of:
+
+- requires
+- invariants
+- produces
+- failure_modes
+
+A structure_error MUST be mapped to exactly ONE primary error pattern 
+from the predefined ERROR_PATTERN_SET.
+
+A reasoning trace qualifies as structure_error if:
+
+- The core inferential step depends on a flawed structural assumption.
+- Removing the flawed structural assumption would invalidate the conclusion.
+- The reasoning exhibits a coherent but incorrect causal interpretation.
 
 
-def PERTURB_CHECK_SCHEMA(level: str):
+EXECUTION_ERROR:
+
+A non-structural mistake occurring despite correct understanding of the mechanism.
+
+Examples include:
+
+- Arithmetic or symbolic manipulation mistakes
+- Logical slip in multi-step deduction
+- Misreading numeric conditions
+- Accidental omission of a constraint despite acknowledging it earlier
+- Internal inconsistency not tied to a conceptual misunderstanding
+
+Execution_error does NOT represent a systematic misinterpretation 
+of mechanism structure.
+
+
+------------------------------------------------------------
+PRIMARY ERROR PATTERN SELECTION (for structure_error only)
+------------------------------------------------------------
+
+ERROR_PATTERN_SET = {error_pattern_set}
+
+For structure_error:
+
+- Select exactly ONE primary_pattern.
+- The selected pattern must be the DOMINANT structural cause of failure.
+- If multiple patterns appear, choose the one without which the reasoning would not hold.
+- If no dominant structural cause exists, classify as execution_error.
+
+
+------------------------------------------------------------
+INPUT
+------------------------------------------------------------
+
+The inputs are the question structure and a list of incorrect answers, each containing:
+
+- model_id
+- selected_option_statement
+- reasoning_steps
+
+------------------------------------------------------------
+OUTPUT FORMAT (STRICT JSON ONLY)
+------------------------------------------------------------
+
+```json
+{{
+  "error_analysis": [
+    {{
+      "model_id": "M1",
+      "classification": "structure_error" | "execution_error",
+      "primary_pattern": "..." | null,
+      "justification": "Short explanation of why this classification was chosen"
+    }}
+  ]
+}}
+```
+
+------------------------------------------------------------
+IMPORTANT
+------------------------------------------------------------
+
+- Evaluate each reasoning trace independently.
+- Base your decision strictly on the reasoning_trace.
+- Do not evaluate question quality.
+- Do not aggregate across answers.
+- Do not suggest rejection.
+- Output JSON only.
+"""
+# - intended_error_pattern (the pattern originally assigned to that option)
+
+WRONG_ANSWER_USER = """
+------------------------------------------------------------
+Question
+------------------------------------------------------------
+
+{q}
+
+------------------------------------------------------------
+Incorrect Answers
+------------------------------------------------------------
+
+{content}"""
+
+
+def WRONG_ANSWER_SCHEMA(num_errors):
     return {
         "type": "object",
-        "required": ["level", "level_validity", "structural_validity", "internal_consistency", "plausible", "hidden_failure_detected", "non_trivial", "scientific_value", "explanation"],
+        "additionalProperties": False,
+        "required": ["error_analysis"],
         "properties": {
-            "level": {"const": level},
-            "level_validity": {"type": "boolean"},
-            "structural_validity": {"type": "boolean"},
-            "internal_consistency": {"type": "boolean"},
-            "plausible": {"type": "boolean"},
-            "hidden_failure_detected": {"type": "boolean"},
-            "non_trivial": {"type": "boolean"},
-            "scientific_value": {"type": "string", "enum": ["low", "medium", "high"]},
-            "explanation": {"type": "string", "minLength": 1}
+            "error_analysis": {
+                "type": "array",
+                "minItems": num_errors,
+                "maxItems": num_errors,
+                "prefixItems": [
+                    {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "required": ["model_id", "classification", "primary_pattern", "justification"],
+                        "properties": {
+                            "model_id": {"const": f"M{i + 1}"},
+                            "classification": {"type": "string", "enum": ["structure_error", "execution_error"]},
+                            "primary_pattern": {"anyOf": [{"type": "string", "enum": ERROR_PATTERN_SET}, {"type": "null"}]},
+                            "justification": {"type": "string", "minLength": 1}
+                        }
+                    }
+                    for i in range(num_errors)
+                ],
+                "items": False
+            }
         }
     }
 
 
-GENERATE = f"""You are a senior research scientist in {config.subject}.
+RIGHT_ANSWER = f"""You are a structural reasoning annotator for the subject area: {config.subject}. You are given:
 
-Your task is to generate THREE scientifically realistic multiple-choice questions based strictly on the provided paper.
+- A multiple-choice question
+- Several model reasoning traces that reached the correct answer
 
-Each question must contain EXACTLY FIVE answer options (A–E). Exactly ONE option must be correct.
+Your task is to analyze reasoning only based on the question text.
 
-### IMPORTANT DESIGN SHIFT:
+------------------------------------------------------------
+TASK
 
-- The goal is NOT to create a pure logic puzzle.
-- The goal is to simulate realistic scientific reasoning under constrained evidence.
+For EACH reasoning trace, classify the reasoning type and depth.
 
-### REQUIREMENTS
+------------------------------------------------------------
 
-1. Scientific realism
-- The scenario must resemble an actual research setting.
-- Include concrete experimental or analytical conditions.
-- Include at least one observation or result that could plausibly support more than one interpretation.
-- Do NOT introduce assumptions that contradict real-world scientific constraints.
+STEP 1 — Identify Structural Conditions
 
-2. Reasoning structure
-- The correct answer must require synthesizing at least TWO stated conditions.
-- The incorrect options must each fail because they:
-  (a) over-generalize,
-  (b) ignore a stated constraint,
-  (c) assume an unsupported mechanism,
-  or (d) misinterpret the direction of causality.
+From the question, identify explicit structural conditions:
+- stated assumptions
+- constraints
+- boundary conditions
+- causal relationships
+- logical dependencies
 
-3. Difficulty control
-- Avoid trivial elimination (e.g., arithmetic-only reasoning).
-- Avoid questions answerable by single-sentence scanning.
-- Do NOT rely on unstated domain facts.
-- Do NOT test recall of literature.
+Ignore background descriptions.
 
-4. Options
-- All options must be plausible within the field.
-- No option may be obviously false without referencing the scenario.
-- Avoid generic statements that would apply to most systems.
+------------------------------------------------------------
 
-5. Explanation
-For each question:
-- Explain why the correct option best accounts for ALL stated conditions.
-- Explain precisely which condition each incorrect option fails to satisfy.
+STEP 2 — Analyze Reasoning Dependency
 
-### OUTPUT FORMAT
+Determine how many structural conditions are actively used in the reasoning. A reasoning is:
 
-Output ONLY in the following JSON format:
+1. structural_joint_reasoning
+   - Uses at least TWO structural conditions
+   - These conditions form a logical dependency chain
+   - Removing one condition would invalidate the conclusion
+
+2. partial_structural_reasoning
+   - Mentions multiple conditions
+   - But only one is essential for the conclusion
+   - Or reasoning chain is weak / loosely connected
+
+3. shortcut_or_surface_reasoning
+   - Relies on only one condition
+   - Uses general knowledge or pattern matching
+   - Uses elimination strategy
+   - Does not meaningfully depend on question structure
+
+------------------------------------------------------------
+
+STEP 3 — Reasoning Depth
+
+Label reasoning depth:
+
+- shallow: single-step mapping or direct recall
+- moderate: two-step reasoning
+- deep: multi-step chained reasoning with intermediate inferences
+
+------------------------------------------------------------
+
+IMPORTANT RULES
+
+- Do NOT judge whether the question is good or bad.
+- Do NOT mention mechanism terms.
+- Do NOT infer unstated assumptions.
+- Evaluate strictly based on observable reasoning text.
+
+------------------------------------------------------------
+
+OUTPUT FORMAT (STRICT JSON)
+
 ```json
 {{
-  "questions": [
+  "analysis": [
     {{
-      "question": "...",
-      "options": {{
-        "A": "...",
-        "B": "...",
-        "C": "...",
-        "D": "...",
-        "E": "..."
-      }},
-      "answer": "A" | "B" | "C" | "D" | "E",
-      "explanations": "..."
+      "model_id": "M1",
+      "reasoning_type": "structural_joint_reasoning" | "partial_structural_reasoning" | "shortcut_or_surface_reasoning",
+      "reasoning_depth": "shallow" | "moderate" | "deep",
+      "justification": "Explain why this classification is assigned"
     }}
   ]
 }}
 ```
 """
 
-QUESTION_SCHEMA = {
-  "type": "object",
-  "required": ["question", "options", "answer", "explanations"],
-  "properties": {
-    "question": {"type": "string", "minLength": 1},
-    "options": {
-      "type": "object",
-      "required": OPTIONS,
-      "properties": {k: {"type": "string", "minLength": 1} for k in OPTIONS}
-    },
-    "answer": {"type": "string", "enum": OPTIONS},
-    "explanations": {"type": "string"}
-  },
-  "additionalProperties": False
-}
+RIGHT_ANSWER_USER = """
+------------------------------------------------------------
+Question
+------------------------------------------------------------
 
-GENERATE_SCHEMA = {
-  "type": "object",
-  "required": ['questions'],
-  "properties": {
-    "questions": {
-      "type": "array",
-      "items": QUESTION_SCHEMA
+{q}
+
+------------------------------------------------------------
+Correct Answers
+------------------------------------------------------------
+
+{content}"""
+
+
+def RIGHT_ANSWER_SCHEMA(num_rights):
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["analysis"],
+        "properties": {
+            "analysis": {
+                "type": "array",
+                "minItems": num_rights,
+                "maxItems": num_rights,
+                "prefixItems": [
+                    {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "required": ["model_id", "reasoning_type", "reasoning_depth", "justification"],
+                        "properties": {
+                            "model_id": {"const": f"M{i + 1}"},
+                            "reasoning_type": {"type": "string", "enum": ["structural_joint_reasoning", "partial_structural_reasoning", "shortcut_or_surface_reasoning"]},
+                            "reasoning_depth": {"type": "string", "enum": ["shallow", "moderate", "deep"]},
+                            "justification": {"type": "string", "minLength": 1}
+                        }
+                    }
+                    for i in range(num_rights)
+                ],
+                "items": False
+            }
+        }
     }
-  },
-  "additionalProperties": False
-}
 
-FILTER = f"""You are a strict scientific benchmark filter for the subject area: {config.subject}. Your task is to decide whether the given multiple-choice question should be eliminated because answering it would require access to paper-specific details rather than scientific reasoning, or because it lacks strong relevance to the subject area.
-
-A question MUST be eliminated if correct answering requires:
-- Referring to a specific figure, table, equation, or section from a paper
-- Recalling exact numerical values, sample labels, dataset names, or configuration details not stated in the question
-- Remembering experimental or analytical conditions not explicitly stated in the question
-- Concluding "insufficient information is given" as the main reasoning step
-- Applying only generic reasoning that would equally apply to most scientific disciplines, without substantive connection to {config.subject}
-
-A question MUST be retained if it can be answered through:
-- Logical consequences of explicitly stated assumptions
-- Conceptual reasoning about mechanisms, principles, or theoretical structures central to {config.subject}
-- Comparing competing interpretations within the conceptual framework of {config.subject}
-- High-level domain knowledge specific to {config.subject}, without requiring recall of paper-specific details
-
-IMPORTANT:
-The question must demonstrate clear and substantive dependence on core concepts, methods, or theoretical structures of {config.subject}. If it could be answered equally well without subject-specific expertise, it must be eliminated.
-
-Output ONLY in JSON format:
-
-```json
-{{
-  "eliminate": true | false,
-  "reason": "brief explanation"
-}}
-```
-"""
 
 REVISE = """You are an expert scientific question designer. You are given a well-formed multiple-choice question with 5 options and a single correct answer. 
 
@@ -1278,14 +2025,14 @@ Output JSON only:
     "E": "..."
   },
   "answer": "...",
-  "explanations": "..."
+  "explanation": "..."
 }
 ```
 """
 
 REVISE_SCHEMA = {
   "type": "object",
-  "required": ["question", "options", "answer", "explanations"],
+  "required": ["question", "options", "answer", "explanation"],
   "properties": {
     "question": {"type": "string", "minLength": 1},
     "options": {
@@ -1295,170 +2042,7 @@ REVISE_SCHEMA = {
       "additionalProperties": False
     },
     "answer": {"type": "string", "enum": EXPAND_OPTIONS},
-    "explanations": {"type": "string"}
+    "explanation": {"type": "string"}
   },
-  "additionalProperties": False
-}
-
-SELF_CONTRADICT = """You are a strict scientific benchmark filter. You are given a scientific multiple-choice question stem. Your task is to judge whether the question stem itself is internally self-contradictory.
-
-Definition:
-A stem is self-contradictory if it simultaneously assumes statements that cannot all be true under any reasonable scientific or theoretical interpretation.
-
-Instructions:
-- Do NOT evaluate answer options.
-- Do NOT judge realism or probability.
-- Only check whether the assumptions in the stem can logically and coherently coexist.
-
-Output format:
-```json
-{
-  "self_contradictory": true | false,
-  "reason": "brief explanation"
-}
-```
-"""
-
-REDUNDANT = """You are a strict scientific benchmark filter. You are given a scientific multiple-choice question. Your task is to judge whether the question stem contains information that:
-- Is not required to determine the correct answer, AND
-- Does not meaningfully function as a distractor for any option.
-
-Instructions:
-- Do NOT assume perfect exam design.
-- Only flag information that is clearly irrelevant to all options.
-- If unsure, answer "no".
-
-Output format:
-```json
-{
-  "contains_redundant_information": true | false,
-  "reason": "brief explanation"
-}
-```
-"""
-
-IMPLAUSIBLE = """You are a strict scientific benchmark filter. You are given a scientific question. Your task is to judge whether the combination of assumptions described in the question is considered:
-- Extremely atypical, or
-- Violating well-established physical or scientific principles.
-
-Instructions:
-- Judge the combination of assumptions, not individual statements.
-- Do NOT require absolute impossibility; extreme implausibility is sufficient.
-- Ignore purely hypothetical or philosophical framing.
-
-Output format:
-```json
-{
-  "physically_implausible": true | false,
-  "reason": "brief explanation"
-}
-```
-"""
-
-CANONICAL = f"""You are an expert on {config.subject}. You are given an answer option from a scientific multiple-choice question. Rewrite the option into a canonical form that:
-- States only the core claim being asserted
-- Removes rhetorical phrasing, examples, and hedging
-- Does NOT add assumptions from the question stem
-
-Output format:
-```json
-{{
-  "canonical_statement": "one concise declarative sentence"
-}}
-```
-"""
-
-OPTION_CHECK = """You are a strict scientific benchmark filter. You are reviewing a multiple-choice question for quality control. Your task is to identify structural issues that can be judged WITHOUT solving the problem.
-
-Given the question and options below, analyze them under the following rules:
-
-Definitions:
-- "Trivially true without the question" means the option is obviously correct based on general knowledge alone.
-- "Trivially false without the question" means the option is obviously incorrect or nonsensical based on general knowledge alone.
-- "Does not depend on the question" means the option makes a standalone claim so that a knowledgeable reader can decide whether the option is true or false even if the question context is removed.
-- "Semantically redundant options" are options that express essentially the same idea or mechanism, even if worded differently.
-
-Instructions:
-- Do NOT judge which option is correct given the question.
-- Do NOT use information outside the text unless it is general domain knowledge.
-- Be conservative: only label cases that are clear and unambiguous.
-
-Output a JSON object with the following fields:
-```json
-{
-  "trivially_true_without_question": <list of option letters>,
-  "trivially_false_without_question": <list of option letters>,
-  "does_not_depend_on_question": <list of option letters>,
-  "redundant_options": <list of lists of option letters>
-}
-```
-"""
-
-OPTION_SCHEMA = {
-    "type": "object", 
-    "required": [
-        "trivially_true_without_question",
-        "trivially_false_without_question",
-        "does_not_depend_on_question",
-        "redundant_options"
-    ],
-    "properties": {
-        "trivially_true_without_question": {
-            "type": "array",
-            "items": {
-                "type": "string", 
-                "enum": EXPAND_OPTIONS
-            }
-        },
-        "trivially_false_without_question": {
-            "type": "array",
-            "items": {
-                "type": "string", 
-                "enum": EXPAND_OPTIONS
-            }
-        },
-        "does_not_depend_on_question": {
-            "type": "array",
-            "items": {
-                "type": "string", 
-                "enum": EXPAND_OPTIONS
-            }
-        },
-        "redundant_options": {
-            "type": "array",
-            "items": {
-                "type": "array",
-                "minItems": 2,
-                "items": {
-                    "type": "string",
-                    "enum": EXPAND_OPTIONS
-                }
-            }
-        }    
-    }
-}
-
-TEST = f"""You are an expert on {config.subject}. You are asked to answer the following multiple-choice question.
-
-If you determine that:
-- the assumptions are internally contradictory,
-- the question cannot be meaningfully adjudicated given its stated assumptions,
-- or the question is ill-posed as a scientific query,
-
-you MUST select option {NOT_ANSWERABLE}: "None of the above. / This question is unanswerable".
-
-Otherwise, select the single best answer.
-
-Do NOT explain your reasoning. Output only the selected option letter, in the following JSON format:
-
-```json
-{{ "selected_answer": "A" | "B" | "C" | "D" | "E" }}
-```
-"""
-
-TEST_SCHEMA = {
-  "type": "object",
-  "required": ["selected_answer"],
-  "properties": {"selected_answer": {"type": "string", "enum": EXPAND_OPTIONS + [NOT_ANSWERABLE]}},
   "additionalProperties": False
 }

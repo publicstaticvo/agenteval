@@ -67,9 +67,9 @@ class UpgradeRank(AsyncLLMClient):
     def _availability(self, response: str, context: dict):
         text = extract_json(response)
         jsonschema.validate(text, UPGRADE_RANK_SCHEMA)
-        if text['level'] in ['L4', 'L5']:
+        if all(x for x in text.values() if isinstance(x, bool)):
             del context['inputs']['upgrade_analysis']
-            return {**context['inputs'], "L5": text['level'] == "L5"}
+            return context['inputs']
 
     def _organize_inputs(self, inputs):
         string = json.dumps(inputs, indent=2)

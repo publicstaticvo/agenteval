@@ -1,10 +1,12 @@
 import re
 import os
+import sys
 import json
+import asyncio
 import unidecode
-from paper_elements import Paragraph
 
 URL_DOMAIN = "https://openalex.org/"
+_is_shutting_down = False
 
 
 def index_to_abstract(indexes: dict | None):
@@ -233,6 +235,43 @@ def save_result(result: dict, file_path: str) -> None:
         raise
     except Exception:
         pass
+    
+
+def set_shutdown():
+    global _is_shutting_down
+    _is_shutting_down = True
+
+
+def get_shutdown():
+    return _is_shutting_down
+
+
+def handle_exception(loop, context: dict):
+    msg = context.get("exception", context["message"])
+    print(f"捕获到异常: {msg}")
+
+
+def signal_handler(sig, frame):
+    """同步信号处理器 - Windows 兼容"""
+    print(f"\n捕获到信号 {sig}")
+    # 在 Windows 上，我们不能直接调用异步函数，需要设置事件或使用 create_task
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(shutdown())
+        # 停止事件循环
+        loop.stop()
+    except RuntimeError:
+        # 如果没有运行中的循环，直接退出
+        sys.exit(0)
+
+
+async def shutdown():
+    """清理所有挂起的任务"""
+    loop = asyncio.get_running_loop()
+    tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task()]    
+    print(f"正在取消 {len(tasks)} 个任务...")
+    for task in tasks: task.cancel()    
+    if tasks: await asyncio.gather(*tasks, return_exceptions=True)
 
 
 if __name__ == "__main__":
@@ -266,3 +305,4 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"  错误: {e}")
         print()
+
