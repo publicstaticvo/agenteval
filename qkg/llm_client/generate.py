@@ -173,3 +173,7 @@ async def rewrite(generated: list[dict]):
         except Exception as e:
             print(f"RewriteNode {e}")
     return refine
+
+
+async def generateloop(generated: list[dict]):
+    pass

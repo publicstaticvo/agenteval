@@ -5,63 +5,79 @@ EXPAND_OPTIONS = ['A', 'B', 'C', 'D']
 NOT_ANSWERABLE = "E"
 # ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
 
-KNOWLEDGE = f"""You are a senior research scientist in {config.subject}.
+KNOWLEDGE = f"""You are a senior research scientist in {config.subject}. Your task is to extract the theoretical mechanism structure of a paper.
 
-You are analyzing a research paper to extract reusable mechanism units for constructing reasoning-based benchmark questions.
+Do NOT summarize the paper. Do NOT evaluate quality. Do NOT rewrite claims. Only extract structural elements that are explicitly or implicitly required for the main claim to hold.
 
-Your task is to extract 3–6 independent mechanism units from the given research paper. A mechanism unit is defined as a localized causal structure that satisfies:
-- It has identifiable preconditions.
-- It leads to identifiable consequences.
-- It can independently fail under specific conditions.
-- It does NOT require understanding the entire paper to evaluate.
+---
 
-Mechanism units may include:
-- A scientific mechanism
-- A modeling assumption
-- A structural design choice
-- A governing constraint
-- An inductive bias
-- A theoretical dependency
-- A system-level tradeoff
+Extract the following components:
 
-Each mechanism unit must contain:
+### 1. Target Proposition
 
-1. mechanism_unit: 
-   A concise description of a single causal or structural principle.
+Extract exactly ONE Target Proposition.
 
-2. requires:
-   Explicit assumptions or preconditions required for this mechanism to operate.
+The Target Proposition must satisfy:
 
-3. produces:
-   Direct consequences or observable behaviors caused by this mechanism.
+- It expresses a substantive knowledge claim (empirical, theoretical, or methodological).
+- It represents the primary contribution of the paper.
+- If this proposition were false, the paper’s main contribution would lose its significance.
+- It is not:
+  - A definition.
+  - A taxonomy.
+  - A literature summary.
+  - A general background statement.
+  - A policy recommendation.
+- ≤ 35 words.
 
-4. invariants:
-   A structural constraint that must hold whenever the mechanism operates correctly, such that violating it changes the identity of the mechanism. (Not an outcome.)
+### 2. Structural Commitments
 
-5. breaks_when:
-   Concrete conditions under which the mechanism fails or becomes unreliable.
+Extract up to 6 Structural Commitments.
 
-6. minimal_example:
-   A simplified abstract scenario (2–3 sentences) illustrating the mechanism.
+Definition:
+A Structural Commitment is an explicit research design or framing decision adopted in the paper that constrains how the Target Proposition is established, tested, or interpreted.
 
-Strict rules:
-- Do NOT describe the paper’s contributions.
-- Do NOT summarize the overall method.
-- Do NOT combine multiple mechanisms.
-- Each unit must be independently testable.
-- Each “breaks_when” must describe a concrete failure scenario, not a vague limitation.
+Each Structural Commitment must:
 
-Output JSON only:
+- Be an explicit research design, framing, or methodological decision.
+- Constrain how the Target Proposition is established or evaluated.
+- Be stated in a way that is specific to the study.
+
+Examples include:
+- Choice of theoretical framework or model class
+- Specification of methodological approach
+- Experimental or empirical design setup
+- Data selection criteria or sampling regime
+- Analytical or statistical assumptions required for inference
+- Measurement or evaluation protocol
+- Operationalization of key constructs
+- Boundary conditions explicitly imposed
+- Computational, physical, or experimental constraints adopted by the study
+
+Do NOT extract:
+- Definitions of terms
+- Widely accepted background knowledge
+- Descriptive statements about the field
+- Purely historical context
+- Normative or ethical recommendations
+- High-level societal predictions
+- Generic statements that could apply to most studies
+
+---
+
+Output Format (Please output JSON Only):
+
 ```json
 {{
-  "mechanism_units": [
+  "target_proposition": "...",
+  "structural_commitments": [
     {{
-      "mechanism_unit": "...",  
-      "requires": ["assumption_1", ...],
-      "produces": ["behavior_1", ...],
-      "invariants": ["constraint_1", ...],
-      "breaks_when": ["condition_1", ...],
-      "minimal_example": "..."
+      "id": "C1",
+      "statement": "..."
+    }},
+    {{
+      "id": "C2",
+      "statement": "..."
     }},
     ...
   ]
@@ -70,168 +86,163 @@ Output JSON only:
 """
 
 KNOWLEDGE_SCHEMA = {
-    "type": "object",
-    "required": ["mechanism_units"],
-    "properties": {
-        "mechanism_units": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "required": ["mechanism_unit", "requires", "produces", "invariants", "breaks_when", "minimal_example"],
-                "properties": {
-                    "mechanism_unit": {"type": "string", "minLength": 1},
-                    "requires": {"type": "array", "items": {"type": "string", "minLength": 1}},
-                    "produces": {"type": "array", "items": {"type": "string", "minLength": 1}},
-                    "invariants": {"type": "array", "items": {"type": "string", "minLength": 1}},
-                    "breaks_when": {"type": "array", "items": {"type": "string", "minLength": 1}},
-                    "minimal_example": {"type": "string", "minLength": 1}
-                },
-                "additionalProperties": False
-            }
-        }
-    },
-    "additionalProperties": False
+  "type": "object",
+  "properties": {
+    "target_proposition": {"type": "string", "minLength": 1},
+    "structural_commitments": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "statement": {"type": "string", "minLength": 1}
+        },
+        "required": ["id", "statement"],
+        "additionalProperties": False
+      },
+      "prefixItems": [
+        {"properties": {"id": {"const": "C1"}}},
+        {"properties": {"id": {"const": "C2"}}},
+        {"properties": {"id": {"const": "C3"}}},
+        {"properties": {"id": {"const": "C4"}}},
+        {"properties": {"id": {"const": "C5"}}},
+        {"properties": {"id": {"const": "C6"}}}
+      ]
+    }
+  },
+  "required": ["target_proposition", "structural_commitments"],
+  "additionalProperties": False
 }
 
-KNOWLEDGE_FILTER = f"""You are a strict scientific benchmark filter for the subject area: {config.subject}. You are evaluating extracted mechanism units for suitability in reasoning-benchmark construction.
+KNOWLEDGE_FILTER = """You are a strict scientific benchmark filter. You are evaluating extracted mechanism units and detect semantic-level issues.
 
 A mechanism unit is expected to contain:
-- mechanism_unit
-- requires
-- invariant
-- produces
-- breaks_when
-- minimal_example
+- a target proposition
+- fixed facts
+- structural commitments
 
-Your task is NOT to judge scientific correctness. Your task is to judge structural suitability for reasoning benchmark construction.
-
-Evaluate the following:
-
-1. Atomicity:
-   Does this mechanism describe a single causal principle?
-
-   - atomic:
-       A single, well-defined causal mechanism that can be reasoned about independently.
-   - composite:
-       Multiple mechanisms or loosely connected causal ideas bundled together.
-   - vague:
-       Descriptive, high-level, or lacks clear causal structure.
-
-2. Explicit invariant presence:
-   Does the mechanism clearly specify a structural property (invariant) that must hold whenever the mechanism operates correctly, such that violating it changes the identity of the mechanism?
-
-   - explicit:
-       A falsifiable, structural constraint (e.g., monotonic relation, bounded divergence, order consistency).
-   - implicit:
-       An invariant can be inferred but is not clearly articulated.
-   - none:
-       No structural invariant; only outcomes or design descriptions are given.
-
-3. Structural perturbability:
-   Can at least one of the following be independently modified without logical collapse of the mechanism?
-
-   - requires
-   - invariant
-   - breaks_when
-
-   (The mechanism should allow meaningful counterfactual variation.)
-
-   Answer:
-   - yes
-   - no
-
-4. Hidden dependency risk:
-   Does understanding or evaluating the mechanism require substantial background knowledge from the original paper or domain-specific assumptions not stated in the mechanism?
-
-   - low:
-       Self-contained and structurally evaluable.
-   - medium:
-       Some domain assumptions required but manageable.
-   - high:
-       Cannot be evaluated without detailed paper context.
-
-5. Counterfactual coherence:
-   If assumptions or invariants are modified, can logically coherent counterfactual scenarios be constructed?
-
-   - low:
-       Any modification collapses the mechanism immediately.
-   - medium:
-       Some modifications possible but fragile.
-   - high:
-       Multiple stable counterfactual variants possible.
-
-6. Reasoning depth potential:
-   Would reasoning about this mechanism naturally require multi-step logical reasoning (e.g., reasoning through invariants, boundary conditions, or causal chains)?
-
-   - low:
-       Mostly factual or definitional.
-   - medium:
-       Requires limited multi-step reasoning.
-   - high:
-       Requires structured reasoning over causal dependencies.
-
-7. Minimal example quality:
-
-   7.1 Concreteness:
-       Does the example contain explicit entities, variables, and observable outcomes?
-       - high / medium / low
-
-   7.2 Operational evaluability:
-       Can invariant and produces be evaluated using only this example?
-       - yes / partial / no
-
-   7.3 Perturbation anchor strength:
-       Can the example support meaningful modifications 
-       (changing requires, violating invariant, shifting failure boundary)?
-       - strong / moderate / weak
-
-Output JSON only:
+Return a JSON object:
 
 ```json
-{{
-  "atomicity": "atomic" | "composite" | "vague",
-  "explicit_invariant_presence": "explicit" | "implicit" | "none",
-  "structural_perturbability": "yes" | "no",
-  "hidden_dependency_risk": "low" | "medium" | "high",
-  "counterfactual_coherence": "low" | "medium" | "high",
-  "reasoning_depth_potential": "low" | "medium" | "high",
-  "minimal_example_quality": {{
-    "concreteness": "high" | "medium" | "low",
-    "operational_evaluability": "yes" | "partial" | "no",
-    "perturbation_anchor_strength": "strong" | "moderate" | "weak"
-  }}
-}}
+{
+  "target_proposition_issues": [...],
+  "structural_commitment_issues": [...]
+}
 ```
+
+Each issue must include:
+
+{
+  "id": "...",  # required for structural commitment issues
+  "problem": "...",  # MUST choose from given problem marks
+  "reason": "..."
+}
+
+If no issue exists in a category, return an empty list.
+
+---
+
+# Evaluation Rules
+
+---
+
+## 1. Target Proposition Check
+
+For the Target Proposition:
+
+1. Determine whether it is a genuine proposition.
+   Mark as "not_a_proposition" if it is:
+   - A definition
+   - A taxonomy
+   - A descriptive summary
+   - A normative recommendation
+   - A background statement
+
+2. Determine whether it is central to the paper’s objective.
+   Mark as "not_primary_contribution" if the statement expresses a claim, but it does not represent the primary contribution of the paper. It may be:
+   - A supporting result
+   - A side finding
+   - A methodological detail
+   - A contextual claim
+
+---
+
+## 2. Structural Commitment Checks
+
+For each structural commitment:
+
+1. Mark as "misclassified_background" if the statement describes background knowledge, commonly accepted facts, or general characteristics of the field rather than a design decision adopted by the study.
+   (e.g. Reinforcement learning models describe how agents learn from feedback.)
+
+2. Mark as "generic_statement" if the statement is too general or abstract to represent a concrete research design decision.
+   (e.g. Evaluation must be rigorous and fair.)
+
+3. Mark as "duplicated_semantics" if two or more structural commitments express substantially overlapping content or restate the same design decision in different wording.
+
+4. Mark as "peripheral_design" if the statement describes an implementation detail or secondary procedural choice that does not materially constrain how the Target Proposition is established.
+   (e.g. Training was performed for 100 epochs.)
+
+# 3. Validity Checks
+
+For each extracted item (Target Proposition or Structural Commitment):
+
+Check whether it is structurally self-contained.
+
+1. Mark as "reference_dependency" if it contains explicit references to the original paper.
+   (e.g., "Figure 2", "Section 4", "Table 1", "as shown above")
+
+2. Mark as "underspecified_entity" if it refers to entities using placeholders without minimal description and does not clarify their general nature.
+   (e.g., "our method", "this approach", "the model")
+
+3. Mark as "other_invalidity" if it cannot be understood as a standalone research statement without access to the original paper.
+
+---
+
+# Important Constraints
+
+- Do not judge scientific correctness.
+- Do not suggest rewrites.
+- Do not compress content.
+- Do not enforce structural limits.
+- Do not apply keyword-based heuristics.
+- Use semantic reasoning only.
+
+Return only JSON.
 """
 
 KNOWLEDGE_FILTER_SCHEMA = {
   "type": "object",
-  "required": [
-    "atomicity",
-    "explicit_invariant_presence",
-    "structural_perturbability",
-    "hidden_dependency_risk",
-    "counterfactual_coherence",
-    "reasoning_depth_potential",
-    "minimal_example_quality"
-  ],
+  "required": ["target_proposition_issues", "structural_commitment_issues"],
   "properties": {
-    "atomicity": {"type": "string", "enum": ["atomic", "composite", "vague"]},
-    "explicit_invariant_presence": {"type": "string", "enum": ["explicit", "implicit", "none"]},
-    "structural_perturbability": {"type": "string", "enum": ["yes", "no"]},
-    "hidden_dependency_risk": {"type": "string", "enum": ["low", "medium", "high"]},
-    "counterfactual_coherence": {"type": "string", "enum": ["low", "medium", "high"]},
-    "reasoning_depth_potential": {"type": "string", "enum": ["low", "medium", "high"]},
-    "minimal_example_quality": {
-      "type": "object",
-      "required": ["concreteness", "operational_evaluability", "perturbation_anchor_strength"],
-      "properties": {
-        "concreteness": {"type": "string", "enum": ["high", "medium", "low"]},
-        "operational_evaluability": {"type": "string", "enum": ["yes", "partial", "no"]},
-        "perturbation_anchor_strength": {"type": "string", "enum": ["strong", "moderate", "weak"]}
-      }
+    "target_proposition_issues": {
+        "type": "array",        
+        "items": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ['problem', 'reason'],
+            "properties": {
+                "problem": {"enum": ["not_a_proposition", "not_primary_contribution", "duplicated_semantics", "reference_dependency", "underspecified_entity", "other_invalidity"]},
+                'reason': {"type": "string", "minLength": 1}
+            }
+        }
+    },
+    "structural_commitment_issues": {
+        "type": "array",        
+        "items": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ['id', 'problem', 'reason'],
+            "properties": {
+                "id": {"type": "string", "pattern": r"^C\d+$"},
+                "problem": {"enum": ["misclassified_background", "generic_statement", "peripheral_design", "duplicated_semantics", "reference_dependency", "underspecified_entity", "other_invalidity"]},
+                'reason': {"type": "string", "minLength": 1}
+            }
+        }
     }
-  }
+  },
+  "additionalProperties": False
 }
 
 UPGRADE = f"""You are a senior research scientist in {config.subject}. You are performing Mechanism Refinement.
@@ -520,8 +531,8 @@ GENERATION PROCEDURE (Follow in order for each perturbation)
 ------------------------------------------------------------
 
 Step 1. Decide which components are modified according to the LEVEL rule.
-Step 2. Fill modified_* arrays.
-Step 3. Fill preserved_* arrays so that coverage is complete and disjoint.
+Step 2. Fill modified_- arrays.
+Step 3. Fill preserved_- arrays so that coverage is complete and disjoint.
 Step 4. Derive new_produces as the logical consequence of modified_requires.new + preserved_requires + modified_invariants.new + preserved_invariants.
 Step 5. Derive new_failure_modes strictly as violations of modified_requires.new or modified_invariants.new. Failure modes must be consistent with the new mechanism structure. Do NOT reuse old failure_modes verbatim unless they still logically apply.
 Step 6. Write new minimal_example consistent with modifications.
@@ -576,16 +587,16 @@ CRITICAL RULES (MANDATORY)
 1. You must generate exactly {number} comprehensive, non-trivial perturbations.
 2. Do NOT invent new requires, invariants, or failure_modes.
 3. modified_*.origin fields must be subsets of the original mechanism fields. Fill modified_*.new fields as your rewritten content.
-4. preserved_* fields must contain all remaining unmodified elements.
-5. modified_*.origin and preserved_* must NOT overlap.
-6. The union of modified_*.origin and preserved_* must exactly equal the original set.
+4. preserved_- fields must contain all remaining unmodified elements.
+5. modified_*.origin and preserved_- must NOT overlap.
+6. The union of modified_*.origin and preserved_- must exactly equal the original set.
 7. Output STRICT JSON ONLY. No explanation text.
 
 The new minimal_example must:
 
-* Explicitly instantiate all requires.
-* Respect all invariants.
-* Not accidentally trigger an obvious failure mode (unless the level definition requires boundary stress).
+- Explicitly instantiate all requires.
+- Respect all invariants.
+- Not accidentally trigger an obvious failure mode (unless the level definition requires boundary stress).
 """
 
 PERTURB_REQUIREMENTS = [
@@ -1194,7 +1205,7 @@ OUTPUT FORMAT (STRICT JSON)
 MANDATORY CONSTRAINTS
 
 1. The question must define all entities explicitly.
-2. The phrase “the mechanism” is forbidden.
+2. The phrase "the mechanism" is forbidden.
 3. No undefined abbreviations.
 4. Each option must correspond exactly to one reasoning_graph predicted_outcome.
 5. You may NOT introduce new causal links.

@@ -31,6 +31,7 @@ RETRY_EXCEPTION_TYPES = [
     json.JSONDecodeError
 ]
 OPENALEX_SELECT = 'id,title,best_oa_location,locations'
+file_lock = asyncio.Lock()
 
 
 class RateLimit:
