@@ -88,7 +88,7 @@ def extract_json(text: str) -> dict:
     text = re.sub(r"\s+", " ", text)
 
     try:
-        pattern = re.findall(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)[-1]
+        pattern = re.findall(r"```(?:json)?\s*(\{.*?\}|\[.*?\])\s*```", text, re.DOTALL)[-1]
         return json.loads(pattern)
     except Exception:
         pass

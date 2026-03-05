@@ -18,7 +18,7 @@ class Mechanism(AsyncLLMClient):
 
     def _availability(self, response: str, context: dict):
         text = extract_json(response)
-        jsonschema.validate(text, KNOWLEDGE_SCHEMA)
+        if text: jsonschema.validate(text, KNOWLEDGE_SCHEMA)
         return text
 
     def _organize_inputs(self, inputs):
@@ -52,25 +52,36 @@ async def structloop(paper):
         return f"StructureNode {e}"
     if not generated: return "No mechanism"
 
-    async with file_lock:
-        with open(config.temp_output, 'a+', encoding='utf-8') as f:
-            f.write(json.dumps({**generated, "id": paper['id']}) + "\n")
+    # async with file_lock:
+    #     with open(config.temp_output, 'a+', encoding='utf-8') as f:
+    #         f.write(json.dumps({**generated, "id": paper['id']}) + "\n")
 
     model = MechanismFilter(config.critic_models[0], GREEDY_PARAMS, 1800)
     try:
         keep = await model.call(inputs={"unit": generated, "paper": paper})
-        print(list(len(x) for x in keep.values()))
         if any(keep.values()): 
-            if keep['target_proposition_issues']: decision = "Fail target proposition"
+            if keep['target_proposition_issues']: decision = "Failed target proposition"
             else:
                 issued_commitment = set(x['id'] for x in keep['structural_commitment_issues'])
-                if (rest := len(generated['structural_commitments']) - len(issued_commitment)) > 0:
+                if (rest := len(generated['structural_commitments']) - len(issued_commitment)) > 2:
                     decision = f"Passed after reduce to {rest} SCs"
-                else: decision = f"Failed no valid structural commitment"
+                    issued, not_issued, not_issued_id_map = [], [], []
+                    for x in generated['structural_commitments']:
+                        if x['id'] in issued_commitment: issued.append(x)
+                        else: 
+                            not_issued_id_map.append(x['id'])
+                            x['id'] = f"C{len(not_issued_id_map)}"
+                            not_issued.append(x)
+                    generated = {
+                        "target_proposition": generated['target_proposition'], 
+                        'structural_commitments': not_issued,
+                        # 'issued': issued
+                    }
+                else: decision = f"Failed too few valid structural commitment: {rest}"
         else:
             decision = "Passed Perfect"
     except Exception as e:
-        decision = keep = f"StructureFilterNode {e}"        
+        decision = keep = f"StructureFilter Error {e}"
 
     paper['mechanism'] = {"decision": decision, "status": keep, **generated}
     return paper

@@ -1,4 +1,5 @@
 import random
+import json, jsonschema
 import aiohttp, asyncio, aiofiles, io
 from typing import Optional
 from tenacity import (
@@ -9,13 +10,19 @@ from tenacity import (
     retry_if_result,
 )
 
-from utils import yield_location
+from prompts import *
+from utils import yield_location, extract_json
 from pdf_parser import XMLPaperParser
+from llm_client.base import AsyncLLMClient
 from session_manager import openalex_search_paper, SessionManager, RateLimit
 
 
 GROBID_URL = "http://172.18.36.90:8070"
 parser = XMLPaperParser()
+GREEDY_PARAMS = {
+    'temperature': 0.0, "max_tokens": 8192, "seed": 42, "repetition_penalty": 1.0,
+    "length_penalty": 1.0, "no_repeat_ngram_size": 0,
+}
 
 
 def grobid_should_retry(exception: Exception) -> bool:
@@ -164,3 +171,60 @@ async def parse_pdf_file(session: aiohttp.ClientSession, pdf_file: str) -> Optio
         raise
     except Exception as e:
         return
+
+
+class PaperClass(AsyncLLMClient):
+
+    def _availability(self, response: str, context: dict):
+        text = extract_json(response)
+        jsonschema.validate(text, PAPERCLASS_SCHEMA)
+        return text['paper_type'] in ['A', 'B', 'C']
+
+    def _organize_inputs(self, inputs):
+        unit = f"Title: {inputs['title']}\nAbstract: {inputs['abstract']}"
+        return [{'role': 'system', 'content': PAPERCLASS}, {'role': 'user', 'content': unit}], {}
+
+
+async def searchquery(query_id: int, query: str, papers_per_query: int = 200):
+    """主入口：搜索并下载论文"""
+    print(f"Searching papers for {query} ...")
+    
+    # 1. 调用异步搜索 OpenAlex
+    filters = {
+        "title_and_abstract.search": query, 
+        "concepts.id": "C41008148", 
+        "from_publication_date": "2021-01-01"
+    }
+    search_result = await openalex_search_paper("works", filter=filters, per_page=papers_per_query)
+    search_result = search_result.get("results", [])
+    print(f"Search papers for {query}, get {len(search_result)} results")
+        
+    session = SessionManager.get()
+    async def process_single_paper(i, paper_meta):
+        if not paper_meta: return
+        try:
+            paper_data = await process_paper(session, paper_meta)  # title, abstract, url, skeleton            
+            if not paper_data: return
+            if not paper_data['title']:
+                paper_data['title'] = paper_meta['title']
+                if not paper_data['title']: return
+            if not paper_data['abstract']:
+                paper_data['abstract'] = paper_meta['abstract']
+                if not paper_data['abstract']: return
+            model = PaperClass(config.generate_model, GREEDY_PARAMS)
+            result = await model.call(inputs=paper_data)
+            if not result: return
+            with open(f"{config.paper_dir}/Paper_q{query_id}p{i}.json", "w", encoding='utf-8') as f: 
+                paper_data['id'] = f"q{query_id}p{i}"
+                if not paper_data['title']: paper_data['title'] = paper_meta['title']
+                json.dump(paper_data, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            print(f"Metadata {i} of query id {query_id} query {query} fails an {e}")
+            raise
+
+    tasks = []
+    for i, paper_meta in enumerate(search_result):
+        # 为每篇论文创建任务（内部会尝试所有 URL）
+        tasks.append(asyncio.create_task(process_single_paper(i, paper_meta)))
+    
+    await asyncio.gather(*tasks)
