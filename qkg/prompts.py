@@ -331,10 +331,9 @@ Rules:
 
 1. Evaluate each Ci individually.
 2. Classify the dependency as one of the following:
-   - Necessary: Removing Ci would make TP fail or unsupported.
-   - Peripheral: TP would largely still hold without Ci; Ci only provides minor support.
-   - Sufficient: Ci alone can ensure TP holds under some context.
-   - Auxiliary: Ci has indirect or partial influence, not strictly necessary or sufficient.
+   - Necessary: Ci is required for the argument supporting TP. If Ci were removed, the paper’s reasoning for TP would fail or become unsupported.
+   - Supporting: Ci contributes to the reasoning for TP but is not strictly required. Removing Ci would weaken the argument but TP could still plausibly hold.
+   - Irrelevant: Ci does not play a meaningful role in supporting TP. Removing Ci would not affect whether TP holds.
 3. Provide a short reasoning for each classification (1-2 sentences, optional).
 
 Output Format (JSON):
@@ -343,7 +342,7 @@ Output Format (JSON):
 [
   {
     "id": "C1",
-    "dependency_type": "necessary / peripheral / sufficient / auxiliary",
+    "dependency_type": "necessary / supporting / irrelevant",
     "reasoning": "Optional, concise explanation for classification."
   },
   ...
@@ -360,7 +359,7 @@ def KNOWLEDGE_CLASS_SCHEMA(origin):
         "items": {
             "type": "object",
             "properties": {
-                "dependency_type": {'enum': ['necessary', 'peripheral', 'sufficient', 'auxiliary']},
+                "dependency_type": {'enum': ['necessary', 'supporting', 'irrelevant']},
                 "reasoning": {'type': 'string', 'minLength': 1}
             },
             'required': ['id', 'dependency_type', 'reasoning'],
@@ -526,8 +525,8 @@ Requirements:
 The four answer options must correspond to these meanings (rephrased naturally in context):
 
 A. The proposition still holds as stated.
-B. The proposition holds only in a weakened or limited form.
-C. The proposition does not hold.
+B. The proposition does not hold.
+C. The proposition holds only in a weakened or limited form.
 D. The outcome cannot be determined from the information given.
 
 Output format (JSON only):
@@ -577,551 +576,124 @@ GENERATE_SCHEMA = {
   }
 }
 
-FILTER = f"""You are a strict scientific benchmark filter for the subject area: {config.subject}. Your task is to evaluate a multiple-choice scientific reasoning question.
+FILTER = """You are a strict question filter. Your task is to verify whether a multiple-choice question satisfies structural validity requirements.
 
-The question has 4 reasoning paths (A–D). Exactly one is structurally consistent with the mechanism. The others are intended to be structurally flawed but locally plausible.
+The question follows a fixed semantic answer framework:
 
-Your task is NOT to solve the question. Your task is to evaluate structural symmetry and tension quality.
+A — The Target Proposition still holds.
+B — The Target Proposition fails.
+C — The Target Proposition only partially holds.
+D — It cannot be determined from the given information.
 
-------------------------------------------------------------
-INPUT
-------------------------------------------------------------
+You must NOT attempt to solve the question or judge its scientific validity. Your task is only to check whether the question structure is valid.
 
-- question
-- mechanism_summary
-- structural_tension_anchor
-- reasoning_paths (A–D)
+Evaluate the following aspects:
 
-------------------------------------------------------------
-EVALUATION CRITERIA
-------------------------------------------------------------
+------------------------------------------------
+1. Option Semantic Compliance
+------------------------------------------------
 
-1. Local Plausibility Symmetry
-For each path:
-- Is it internally coherent?
-- Does it avoid obvious logical jumps?
-- Does it avoid extreme language cues (e.g., strictly, necessarily, entirely)?
-- Does it avoid trivial contradiction?
+Check whether each option correctly matches the intended semantic meaning.
 
-If one path is clearly more polished or more stable → false.
-Otherwise → true.
+Valid forms:
 
-------------------------------------------------------------
+A — clearly states that the Target Proposition still holds.
+B — clearly states that the Target Proposition fails or no longer holds.
+C — clearly states that the Target Proposition only partially holds, weakens, or holds in a limited way.
+D — clearly states that the outcome cannot be determined from the provided information.
 
-2. Structural Complexity Balance
+Mark an issue if:
 
-Compare paths on:
-- number of requires used
-- number of invariants referenced
-- number of failure_modes referenced
-- reasoning chain depth
+- An option expresses a different meaning.
+- The wording contradicts the intended semantic category.
+- The meaning is unclear or inconsistent with the framework.
 
-If one path is structurally deeper or more comprehensive → false.
-Otherwise → true.
+Issue type: "invalid_option_semantics"
 
-------------------------------------------------------------
+------------------------------------------------
+2. Option Distinctness
+------------------------------------------------
 
-3. Divergence Node Check
+Check whether the four options are semantically distinct.
 
-Determine whether:
-- All paths diverge at the same structural decision point.
+Mark an issue if:
 
-If divergence occurs at unrelated places → false.
-Otherwise → true.
+- Two or more options express essentially the same meaning.
+- The difference between options is trivial or unclear.
 
-------------------------------------------------------------
+Issue type: "ambiguous_option"
 
-4. Structural Failure Tension Check
+------------------------------------------------
+3. External References
+------------------------------------------------
 
-Verify:
-- Do at least two reasoning paths handle a structural boundary differently?
-- Is there a clear structural tension around a constraint or stability condition?
-- Is the correct path resolving that tension differently from at least one incorrect path?
+Check whether the question relies on information outside the provided text.
 
-If no real structural boundary is being contested → false.
+Mark an issue if the question refers to:
 
-------------------------------------------------------------
+- figures, tables, or sections of the original paper
+- "the method proposed in the paper"
+- unnamed algorithms or mechanisms not defined in the question
+- experimental results not included in the question
+- dataset-specific or paper-specific terminology that is not explained
 
-5. Structural Constraint Engagement
+Issue type: "external_reference"
 
-Definition:
-A question has structural constraint engagement if at least two reasoning paths handle a meaningful mechanism boundary or constraint differently, and the correct path resolves this boundary coherently.
+------------------------------------------------
+4. Missing Information
+------------------------------------------------
 
-Evaluation Logic:
+Check whether the question provides enough information to interpret the counterfactual scenario.
 
-1. Identify whether a clear structural boundary exists (e.g., capacity–interference tradeoff, invariant limit, failure boundary).
-2. Check whether at least two reasoning paths explicitly or implicitly treat this boundary differently.
-3. Verify that the correct path resolves the boundary through constraint-consistent reasoning rather than surface plausibility.
+Mark an issue if:
 
-Return:
-- true  → if genuine structural tension exists.
-- false → if no meaningful boundary is contested or if all paths operate in the same logic space.
+- the perturbation is unclear
+- key concepts are undefined
+- the Target Proposition cannot be evaluated without additional context
 
-------------------------------------------------------------
+Issue type: "missing_information"
 
-6. Dominance Cue Detection
+------------------------------------------------
 
-Is the correct path visibly more cautious, more nuanced, or more globally consistent in a way that makes it stand out?
+If the question has no issues, return an empty list.
 
-------------------------------------------------------------
-
-OUTPUT FORMAT (STRICT JSON ONLY)
-------------------------------------------------------------
+Output format:
 
 ```json
-{{
-  "local_symmetry": true / false,
-  "complexity_balance": true / false,
-  "divergence_valid": true / false,
-  "structural_tension": true / false,
-  "structural_constraint_engagement": true / false,
-  "dominance_cue_detected": true / false,
-  "critical_issue": "short explanation"
-}}
-```"""
+{
+  "issues": [
+    {
+      "issue_type": "...",
+      "reason": "..."
+    }
+  ]
+}
+```
+
+Allowed issue types:
+
+- invalid_option_semantics
+- ambiguous_option
+- external_reference
+- missing_information
+"""
 
 FILTER_SCHEMA = {
   "type": "object", 
-  "requires": ["local_symmetry", "complexity_balance", "divergence_valid", "structural_tension", "structural_constraint_engagement", "dominance_cue_detected", "critical_issue"],
+  "requires": ["issues"],
   "properties": {
-      "local_symmetry": {"type": "boolean"},
-      "complexity_balance": {"type": "boolean"},
-      "divergence_valid": {"type": "boolean"},
-      "structural_tension": {"type": "boolean"},
-      "structural_constraint_engagement": {"type": "boolean"},
-      "dominance_cue_detected": {"type": "boolean"},
-      "critical_issue": {"type": "string", "minLength": 1},
-  },
-  "additionalProperties": False
-}
-
-MINITEST = f"""You are an expert on {config.subject}. You are given a scientific reasoning question with 4 reasoning paths (A–D).
-
-Do NOT deeply analyze structural consistency. Instead, choose the option that appears MOST PLAUSIBLE on first-pass reasoning. If none of these options are plausible, please choose "E. None of the above is plausible".
-
-------------------------------------------------------------
-INPUT
-------------------------------------------------------------
-
-- question
-- reasoning_paths (A–D)
-
-------------------------------------------------------------
-OUTPUT FORMAT
-------------------------------------------------------------
-
-```json
-{{
-  "selected_option": "A | B | C | D | E",
-  "explanation": "..."
-}}
-```
-"""
-
-MINITEST_SCHEMA = {
-  "type": "object",
-  "required": ["selected_option", "explanation"],
-  "properties": {
-      "selected_option": {"type": "string", "enum": EXPAND_OPTIONS + [NOT_ANSWERABLE]},
-      "explanation": {"type": "string", "minLength": 1}
-  },
-  "additionalProperties": False
-}
-
-REVERSE_CONSISTENCY = f"""You are a strict scientific benchmark filter for the subject area: {config.subject}. You are evaluating structural constructability of reasoning paths.
-
-You are given:
-
-- A mechanism summary
-- A question
-- Three reasoning paths (A–C)
-
-For EACH reasoning path independently:
-
-Assume the reasoning path is correct.
-
-Your task:
-Determine whether it is possible to construct a logically consistent mechanism, fully compatible with the question stem and mechanism summary, that would make this reasoning path internally valid.
-
-Important:
-
-- Do NOT judge which option is actually correct.
-- Do NOT compare paths.
-- Evaluate each path independently.
-- A path is "constructable" only if no internal contradiction with preserved invariants, stated requirements, or tested failure modes is unavoidable.
-
-If the path requires violating preserved invariants, ignoring tested failure modes, or contradicting the question setup, then it is NOT constructable.
-
-------------------------------------------------------------
-EVALUATION CRITERIA
-------------------------------------------------------------
-
-For each path check:
-
-1. Internal Logical Coherence
-2. Compatibility with preserved invariants
-3. No unavoidable triggering of forbidden failure_modes
-4. No contradiction with the scenario described in the question
-5. Does not rely on undefined or fabricated assumptions
-
-------------------------------------------------------------
-OUTPUT FORMAT (STRICT JSON)
-------------------------------------------------------------
-
-```json
-{{
-  "A": {{
-    "constructable": true / false,
-    "reason": "short explanation"
-  }},
-  "B": {{
-    "constructable": true / false,
-    "reason": "short explanation"
-  }},
-  "C": {{
-    "constructable": true / false,
-    "reason": "short explanation"
-  }}
-}}
-```"""
-
-REVERSE_CONSISTENCY_USER = """
-------------------------------------------------------------
-Mechanism Summary
-------------------------------------------------------------
-
-{unit}
-
-------------------------------------------------------------
-Question
-------------------------------------------------------------
-
-{q}
-
-------------------------------------------------------------
-Reasoning Paths
-------------------------------------------------------------
-
-{options}"""
-
-REVERSE_CONSISTENCY_SCHEMA = {
-    "type": "object",
-    "required": ['A', 'B', 'C'],
-    "properties": {
-        x: {
-            "type": "object",
-            "required": ["constructable", "reason"],
-            "properties": {
-                "constructable": {"type": "boolean"},
-                "reason": {"type": "string", "minLength": 1}
-            },
-            "additionalProperties": False
-        }
-        for x in ['A', 'B', 'C']
-    },
-    "additionalProperties": False
-}
-
-VALID = f"""You are a strict scientific benchmark filter for the subject area: {config.subject}. Your task is to evaluate the intrinsic quality of a question.
-
-Input: 
-A single question only.
-
-You must evaluate the following four criteria independently:
-
-1. language_reasonableness
-2. non_triviality
-3. unambiguity
-4. no_semantic_redundancy
-
-For each criterion:
-- Output true or false.
-- Provide structured reasoning steps explaining how you reached the conclusion.
-- Your reasoning must follow the defined evaluation logic below.
-
------------------------------------
-Evaluation Logic Definitions
------------------------------------
-
-(1) language_reasonableness
-
-Definition:
-The question must be grammatically valid, syntactically coherent, and semantically interpretable.
-
-Evaluation Steps:
-- Step 1: Check for grammatical completeness (subject, predicate, logical connectors).
-- Step 2: Check for internal logical consistency (no contradictory constraints inside the question).
-- Step 3: Check for semantic interpretability (a well-defined task is being requested).
-If any step fails → false.
-Otherwise → true.
-
-(2) non_triviality
-
-Definition:
-The question should require non-obvious reasoning or structural inference.
-
-Evaluation Steps:
-- Step 1: Determine if the answer can be retrieved by direct recall of a single common fact.
-- Step 2: Determine if the question can be solved via pattern-matching without reasoning.
-- Step 3: Determine whether solving requires combining at least two constraints, logical steps, or structural reasoning.
-If Steps 1 or 2 are true AND Step 3 is false → trivial → false.
-Otherwise → true.
-
-(3) unambiguity
-
-Definition:
-The question must have a single clearly defined interpretation and answer space.
-
-Evaluation Steps:
-- Step 1: Identify all possible interpretations.
-- Step 2: Check if multiple interpretations lead to different valid answers.
-- Step 3: Check if key terms are underspecified.
-If ambiguity affects answer determinability → false.
-Otherwise → true.
-
-(4) no_semantic_redundancy
-
-Definition:
-The question should not contain duplicated constraints that do not increase structural difficulty.
-
-Evaluation Steps:
-- Step 1: Identify repeated semantic constraints.
-- Step 2: Determine if removing duplicated information changes difficulty.
-If duplicated constraints exist and do not change reasoning path → false.
-Otherwise → true.
-
------------------------------------
-
-Output format (strict JSON):
-
-```json
-{{
-  "language_reasonableness": {{
-    "decision": true | false,
-    "explanation": "..."
-  }},
-  "non_triviality": {{
-    "decision": true | false,
-    "explanation": "..."
-  }},
-  "unambiguity": {{
-    "decision": true | false,
-    "explanation": "..."
-  }},
-  "no_semantic_redundancy": {{
-    "decision": true | false,
-    "explanation": "..."
-  }}
-}}
-```
-"""
-
-VALID_SCHEMA = {
-    "type": "object",
-    "properties": {
-        x: {
-            "type": "object",
-            "properties": {
-                "decision": {"type": "boolean"},
-                "explanation": {"type": "string", "minLength": 1}
-            },
-            "required": ["decision", "explanation"],
-            "additionalProperties": False
-        }
-        for x in ["language_reasonableness", "non_triviality", "unambiguity", "no_semantic_redundancy"]
-    },
-    "required": ["language_reasonableness", "non_triviality", "unambiguity", "no_semantic_redundancy"],
-    "additionalProperties": False
-}
-
-VALID_TENSION = f"""You are a strict structural diagnostic evaluator for the subject area: {config.subject}.  
-
-Input:
-- A single question. The question contains a predefined list: tested_failure_modes (guaranteed non-empty at schema level).
-
-Your task is to determine whether the question genuinely activates those failure modes.
-
-Evaluate the following:
-
-1. failure_mode_activation
-2. structural_tension_present
-3. error_pattern_distinctness
-
------------------------------------
-Evaluation Logic Definitions
------------------------------------
-
-(1) failure_mode_activation
-
-Definition:
-Each tested_failure_mode must be structurally required for correct solving.
-
-Evaluation Steps:
-- Step 1: Identify each tested_failure_mode.
-- Step 2: For each failure mode, check whether a solver who ignores that failure mode would likely fail.
-- Step 3: If a failure mode can be bypassed without affecting success → not activated.
-If all tested_failure_modes are structurally necessary → true.
-Otherwise → false.
-
-(2) structural_tension_present
-
-Definition:
-The question must contain at least two interacting constraints that create competing reasoning pressure.
-
-Evaluation Steps:
-- Step 1: Identify constraints.
-- Step 2: Determine if constraints are independent or interacting.
-- Step 3: Check whether satisfying one constraint increases complexity of satisfying another.
-If interaction exists → true.
-If constraints are additive but non-interacting → false.
-
-(3) error_pattern_distinctness
-
-Definition:
-Different incorrect reasoning paths should produce distinguishable answer types.
-
-Evaluation Steps:
-- Step 1: Enumerate plausible incorrect reasoning strategies.
-- Step 2: Determine whether these produce distinguishable outputs.
-- Step 3: If most wrong paths collapse to same shallow error → not distinct.
-If at least two distinct systematic error patterns exist → true.
-
------------------------------------
-
-Output format (strict JSON):
-
-```json
-{{
-  "failure_mode_activation": {{
-    "decision": true | false,
-    "explanation": "..."
-  }},
-  "structural_tension_present": {{
-    "decision": true | false,
-    "explanation": "..."
-  }},
-  "error_pattern_distinctness": {{
-    "decision": true | false,
-    "explanation": "..."
-  }}
-}}
-```"""
-
-VALID_TENSION_SCHEMA = {
-    "type": "object",
-    "properties": {
-        x: {
-            "type": "object",
-            "properties": {
-                "decision": {"type": "boolean"},
-                "explanation": {"type": "string", "minLength": 1}
-            },
-            "required": ["decision", "explanation"],
-            "additionalProperties": False
-        }
-        for x in ["failure_mode_activation", "structural_tension_present", "error_pattern_distinctness"]
-    },
-    "required": ["failure_mode_activation", "structural_tension_present", "error_pattern_distinctness"],
-    "additionalProperties": False
-}
-
-TEST = f"""You are an expert on {config.subject}. You are asked to answer the following multiple-choice question.
-
-If you determine that:
-- the assumptions are internally contradictory,
-- the question cannot be meaningfully adjudicated given its stated assumptions,
-- or the question is ill-posed as a scientific query,
-
-you MUST select option {NOT_ANSWERABLE}: "None of the above. / This question is unanswerable".
-
-Otherwise, select the single best answer.
-
-Explain your reasoning step by step. Output the selected option letter and the reasoning steps in the following JSON format:
-
-```json
-{{ 
-  "selected_answer": "A" | "B" | "C" | "D" | "E",
-  "reasoning_steps": "..."
-}}
-```
-"""
-
-TEST_SCHEMA = {
-  "type": "object",
-  "required": ["selected_answer", "reasoning_steps"],
-  "properties": {
-      "selected_answer": {"type": "string", "enum": EXPAND_OPTIONS + [NOT_ANSWERABLE]},
-      "reasoning_steps": {"type": "string", "minLength": 1}
-  },
-  "additionalProperties": False
-}
-
-REVISE = """You are an expert scientific question designer. You are given a well-formed multiple-choice question with 5 options and a single correct answer. 
-
-Your task is to IMPROVE the question while preserving:
-- The core research scenario
-- The single correct answer
-- EXACTLY FIVE answer options
-
-You must NOT increase the number of options.
-
-### OBJECTIVES
-
-1. Increase reasoning depth WITHOUT introducing new scientific assumptions.
-- You may clarify experimental conditions.
-- You may make implicit constraints explicit.
-- You may refine wording to remove trivial eliminations.
-
-2. Eliminate superficial logic shortcuts.
-- Remove wording that allows answer selection by pattern matching.
-- Ensure the correct option requires integrating multiple conditions.
-
-3. Scientific coherence check.
-- Verify the scenario does not contradict known scientific principles.
-- Do NOT introduce impossible or mutually exclusive conditions.
-
-4. Option tightening.
-For each incorrect option:
-- Ensure it fails for exactly ONE identifiable reason.
-- Ensure that reason depends on a stated condition.
-
-5. Self-audit before finalizing:
-- Would a domain expert need to reason through the evidence?
-- Could the answer be guessed without analyzing the scenario?
-- Are all options anchored to the specific context?
-
-### OUTPUT FORMAT
-
-Output JSON only:
-```json
-{
-  "question": "...",
-  "options": {
-    "A": "...",
-    "B": "...",
-    "C": "...",
-    "D": "...",
-    "E": "..."
-  },
-  "answer": "...",
-  "explanation": "..."
-}
-```
-"""
-
-REVISE_SCHEMA = {
-  "type": "object",
-  "required": ["question", "options", "answer", "explanation"],
-  "properties": {
-    "question": {"type": "string", "minLength": 1},
-    "options": {
-      "type": "object",
-      "required": EXPAND_OPTIONS,
-      "properties": {k: {"type": "string", "minLength": 1} for k in EXPAND_OPTIONS},
-      "additionalProperties": False
-    },
-    "answer": {"type": "string", "enum": EXPAND_OPTIONS},
-    "explanation": {"type": "string"}
+      "issues": {
+          "type": "array",        
+          "items": {
+              "type": "object",
+              "additionalProperties": False,
+              "required": ['issue_type', 'reason'],
+              "properties": {
+                  "issue_type": {"enum": ["invalid_option_semantics", "ambiguous_option", "external_reference", "missing_information"]},
+                  'reason': {"type": "string", "minLength": 1}
+              }
+          }
+      }
   },
   "additionalProperties": False
 }

@@ -10,41 +10,11 @@ from tenacity import RetryError
 
 from search import searchquery
 from llm_client.generate import generateloop
-from llm_client.valid import valid_check
 from llm_client.perturb import perturbloop
 from llm_client.knowledge_unit import structloop
-from utils import skeleton_to_text, handle_exception, shutdown, signal_handler
+from utils import handle_exception, shutdown, signal_handler
 from session_manager import SessionManager
 from prompts import config
-
-
-async def debug_test():
-    if os.path.exists(config.workflow_output): os.remove(config.workflow_output)
-    origins = {}
-    for i, n in enumerate(glob.glob(f"{config.paper_dir}/*.json")):
-        with open(n, encoding='utf-8') as f: paper = json.load(f)
-        for j, u in enumerate(paper['mechanisms']): origins[f"{i}-{j}"] = u
-    tasks, items = [], []
-    with open(config.temp_output, encoding='utf-8') as f:
-        for x in f:
-            if x.strip():
-                x = json.loads(x.strip())
-                if "ReverseConsistency" in x['status'] or x['status'] == "Majority select False":
-                    del x['status']
-                    if 'reason' in x: del x['reason']
-                    if "model_results" in x: del x["model_results"]
-                    items.append(x)
-                    tasks.append(asyncio.create_task(valid_check(x)))
-    import tqdm
-    for x, task in tqdm.tqdm(zip(items, asyncio.as_completed(tasks)), total=len(tasks)):
-        try:
-            result = await task
-            if result:
-                x = {"status": result, **x}
-                with open(config.workflow_output, 'a+', encoding='utf-8') as f: 
-                    f.write(json.dumps(x, ensure_ascii=False) + "\n")
-        except Exception as e:
-            print(e, type(e))
 
 
 async def search():

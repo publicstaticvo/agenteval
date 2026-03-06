@@ -51,6 +51,7 @@ async def perturbloop(paper):
         return
     tasks = []
     for x in generated['structural_commitments']:
+        if x['dependency_type'] == 'irrelevant': continue
         inputs = {"target_proposition": generated['target_proposition'], 'structural_commitment': x}
         tasks.append(asyncio.create_task(Perturb(config.generate_model, SAMPLE_PARAMS).call(inputs=inputs)))
     for task in asyncio.as_completed(tasks):

@@ -36,7 +36,7 @@ file_lock = asyncio.Lock()
 
 class RateLimit:
     SEARCH_SEMAPHORE = asyncio.Semaphore(4)                # 搜索 API
-    LLM_SEMAPHORE = asyncio.Semaphore(20)       # LLM
+    LLM_SEMAPHORE = asyncio.Semaphore(50)       # LLM
     PARSE_SEMAPHORE = asyncio.Semaphore(4)                 # GROBID docker镜像本地解析
 
 
