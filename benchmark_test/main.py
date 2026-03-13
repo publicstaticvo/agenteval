@@ -16,8 +16,8 @@ GREEDY_PARAMS = {
 correctness_model = Correctness(config.models[0], GREEDY_PARAMS)
 
 
-async def hle(dataset, model):
-    model = HLETest(model, SAMPLE_PARAMS)
+async def hle(dataset, c):
+    model = HLETest(c, SAMPLE_PARAMS)
     tasks = [asyncio.create_task(model.call(inputs=x)) for x in dataset]
     answers = {}
     for task in asyncio.as_completed(tasks):
@@ -28,16 +28,17 @@ async def hle(dataset, model):
     tasks = []
     for x in dataset:
         if x['id'] not in answers: continue
-        if x['answer_type'] == 'exactMatch':
-            tasks.append(asyncio.create_task(correctness_model.call(inputs={"q": x, 'a': answers[x['id']]})))
-        elif x['answer_type'] == 'multipleChoice':
-            answers[x['id']]['eval'] = {"correct": answers[x['id']]['answer'].lower() == x['answer'].lower()}
+        tasks.append(asyncio.create_task(correctness_model.call(inputs={"q": x, 'a': answers[x['id']]})))
+        # if x['answer_type'] == 'exactMatch':
+        #     tasks.append(asyncio.create_task(correctness_model.call(inputs={"q": x, 'a': answers[x['id']]})))
+        # elif x['answer_type'] == 'multipleChoice':
+        #     answers[x['id']]['eval'] = {"correct": answers[x['id']]['answer'].lower() == x['answer'].lower()}
     for task in asyncio.as_completed(tasks):
         try:
             result = await task
             if result: answers[result['id']]['eval'] = result
         except Exception as e: continue
-    return answers, model
+    return answers, c.model
 
 
 async def test():
@@ -52,10 +53,18 @@ async def test():
                 for k in result:
                     if k not in answers: answers[k] = {}
                     answers[k][model] = result[k]
-            except Exception as e: raise
+            except Exception as e: continue
+        outputs = []
         for x in d:
-            if x['id'] in answers: x['answers'] = answers[x['id']]
-        print_json(d, config.answer_output)
+            if x['id'] in answers: 
+                x['answers'] = answers[x['id']]
+                outputs.append(x)
+        if outputs: print_json(outputs, config.answer_output)
     except asyncio.CancelledError: pass
+    except ImportError: pass
     except RetryError: pass
     finally: await SessionManager.close()
+
+
+if __name__ == "__main__":
+    asyncio.run(test())

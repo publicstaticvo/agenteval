@@ -63,6 +63,12 @@ def robust_backslash(text: str) -> str:
                     result.append('\\\\')
                     result.append(next_char)
                     i += 2
+            elif next_char in ['(', ')', '[', ']']:
+                # \( \) \[ \]
+                in_latex = not in_latex
+                if i >= 1 and text[i - 1] != "\\": result.append('\\\\')
+                else: result.append('\\')
+                i += 1
             else:
                 # 在 LaTeX 块外，保持原样
                 result.append('\\')
@@ -79,16 +85,11 @@ def extract_json(text: str) -> dict:
     if not text: return {}
     text = robust_backslash(text)
     text = re.sub(r"\s+", " ", text)
-
-    try:
-        pattern = re.findall(r"```(?:json)?\s*(\{.*?\}|\[.*?\])\s*```", text, re.DOTALL)[-1]
-        return json.loads(pattern)
-    except Exception:
-        pass
     
     try:
         return json.loads(text)
-    except Exception:
+    except Exception as e:
+        print(e)
         pass
     
     start, end = text.find("{"), text.rfind("}")
@@ -138,3 +139,12 @@ async def shutdown():
     print(f"正在取消 {len(tasks)} 个任务...")
     for task in tasks: task.cancel()    
     if tasks: await asyncio.gather(*tasks, return_exceptions=True)
+
+
+if __name__ == "__main__":
+    string = """{
+    "explanation": "For a rotating liquid surface the free‑surface shape is a paraboloid given by \\(z(r)=\\frac{\\omega^2 r^2}{2g}\\).  A paraboloid of focal length \\(f\\) satisfies \\(z(r)=\\frac{r^2}{4f}\\).  Equating the two forms gives \\(\\frac{1}{4f}=\\frac{\\omega^2}{2g}\\) so \\(f=\\frac{g}{2\\omega^2}\\).  The angular speed is driven by a constant power source \\(P\\).  Power equals the rate of change of kinetic energy of the rotating fluid: \\(P=\\frac{d}{dt}\\left(\\frac12 I\\omega^2\\right)=I\\omega\\dot\\omega\\).  With constant \\(P\\) and constant moment of inertia \\(I\\) (solid‑body rotation of the liquid), \\(\\omega\\dot\\omega=P/I\\) ⇒ \\(\\frac{d}{dt}(\\omega^2)=2P/I\\).  Integrating from rest, \\(\\omega^2=(2P/I) t\\), i.e. \\(\\omega^2\\propto t\\).  Substituting into the focal‑length expression gives \\(f\\propto 1/\\omega^2\\propto 1/t\\).  Hence \\(f\\propto t^{n}\\) with \\(n=-1\\).",
+    "answer": -1,
+    "confidence": "99%"
+}"""
+    print(extract_json(string))

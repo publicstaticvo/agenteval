@@ -1,5 +1,6 @@
 import json, jsonschema
 import asyncio, aiohttp
+import unicodedata
 from tenacity import (
     retry,
     stop_after_attempt,           # 最大重试次数
@@ -61,7 +62,8 @@ class AsyncLLMClient:
             return self._availability(content, context)
         except Exception as e:            
             if isinstance(e, aiohttp.ClientResponseError): print("LLMFunctino", type(e), e.status)
-            else: print("LLMFunctino", type(e), str(e))
+            elif not isinstance(e, RuntimeError) and not isinstance(e, aiohttp.ServerDisconnectedError): 
+                print("LLMFunctino", type(e), str(e))
             raise
         
     def _availability(self, response, context):
@@ -76,7 +78,7 @@ class AsyncLLMClient:
         if not messages:
             messages, new_context = self._organize_inputs(inputs)
             context = {**context, **new_context}
-        # for x in messages:
-        #     x['content'] = unicodedata.normalize("NFKC", x['content'])
+        for x in messages:
+            x['content'] = unicodedata.normalize("NFKC", x['content'])
         payload = {"model": self.model, "messages": messages, **self.sampling_params} | kwargs
         return await self._post(payload, context)

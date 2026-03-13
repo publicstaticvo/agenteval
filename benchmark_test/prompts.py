@@ -1,7 +1,19 @@
-HLE = """Your response should be in the following format:
-Explanation: {your explanation for your answer choice}
-Answer: {your chosen answer}
-Confidence: {your confidence score between 0% and 100% for your answer}"""
+HLE = """Your response should be a JSON object only:
+{
+    "explanation": "your explanation for your answer",
+    "answer": <your answer>,
+    "confidence": "your confidence score between 0% and 100% for your answer"
+}
+"""
+
+HLE_SCHEMA = {
+    "type": "object",
+    "required": ['explanation', 'answer', 'confidence'],
+    'properties': {
+        "explanation": {'type': 'string', 'minLength': 1},
+        "confidence": {'type': 'string', 'minLength': 1}
+    }
+}
 
 CORRECTNESS = """Judge whether the following [response] to [question] is correct or not based on the precise and unambiguous [correct_answer] below.
 
@@ -21,16 +33,14 @@ correct: Answer ’yes’ if extracted_final_answer matches the [correct_answer]
 
 confidence: The extracted confidence score between 0% and 100% from [response]. Put 100 if there is no confidence score available.
 
-Your output format should be a JSON object only:
+Your output should be a JSON object only:
 
-```json
 {{
     "extracted_final_answer": "...",
     "reasoning": "...",
     "correct": "yes" | "no",
     "confidence": "..."
 }}
-```
 """
 
 CORRECTNESS_SCHEMA = {

@@ -21,5 +21,5 @@ class Config:
         return cls(
             test_input=config['test_input'],
             answer_output=config['answer_output'],
-            critic_models=[LLMServerInfo(**c) for c in config['models']],
+            models=[LLMServerInfo(**c) for c in config['models']],
         )
